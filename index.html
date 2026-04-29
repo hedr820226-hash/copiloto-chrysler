@@ -16,7 +16,6 @@
         input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #444; background: #000; color: white; outline: none; }
         .btn-send { background: var(--accent); border: none; padding: 10px 20px; color: white; border-radius: 10px; cursor: pointer; }
         .btn-voice { background: #2c3e50; color: white; border: none; padding: 15px; width: 100%; font-size: 1.1em; border-radius: 10px; cursor: pointer; }
-        .listening { background: #e74c3c !important; }
     </style>
 </head>
 <body>
@@ -26,12 +25,12 @@
         <div class="card"><small>KM/H</small><div class="value">0</div></div>
     </div>
     <div id="chat-container">
-        <div id="chat-box"><strong>COPILOTO:</strong> Rogelio, listo para el Chrysler. Escribe o usa la voz.</div>
+        <div id="chat-box"><strong>COPILOTO:</strong> Listo, Rogelio. Pega la llave de Google AI Studio.</div>
         <div class="input-group">
             <input type="text" id="userInput" placeholder="Escribe al copiloto...">
             <button class="btn-send" onclick="enviarTexto()">➔</button>
         </div>
-        <button class="btn-voice" id="btnVoz" onclick="iniciarVoz()">🎤 HABLAR POR VOZ</button>
+        <button class="btn-voice" onclick="iniciarVoz()">🎤 HABLAR POR VOZ</button>
     </div>
 
     <script>
@@ -48,51 +47,49 @@
         async function llamarGemini(texto) {
             let k = localStorage.getItem('gemini_key');
             if (!k) {
-                k = prompt("Pega tu API KEY de Google (AI Studio):");
-                if (k) localStorage.setItem('gemini_key', k.trim());
+                k = prompt("Pega tu API KEY (AIza...):");
+                if (k) { k = k.trim(); localStorage.setItem('gemini_key', k); }
                 else return;
             }
 
-            chatBox.innerHTML += `<div><strong>SISTEMA:</strong> Pensando...</div>`;
+            chatBox.innerHTML += `<div><strong>SISTEMA:</strong> Analizando...</div>`;
             
-            // Usamos la versión estable 'gemini-1.5-flash' para evitar errores 404
+            // URL CORREGIDA: Usando gemini-1.5-flash que es la más estable
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${k}`;
 
             try {
                 const r = await fetch(url, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: "Eres el copiloto experto del Chrysler 96 de Rogelio. Responde breve: " + texto }] }] })
+                    body: JSON.stringify({ contents: [{ parts: [{ text: "Responde muy breve como copiloto mecánico: " + texto }] }] })
                 });
+                
                 const d = await r.json();
                 
-                if (d.error) throw new Error(d.error.message);
+                if (d.error) {
+                    throw new Error(d.error.message);
+                }
 
                 const respuesta = d.candidates[0].content.parts[0].text;
                 chatBox.lastChild.remove();
                 chatBox.innerHTML += `<div><strong>COPILOTO:</strong> ${respuesta}</div>`;
                 hablar(respuesta);
             } catch (e) {
-                console.error(e);
-                chatBox.innerHTML += `<div><strong>SISTEMA:</strong> Error de llave. Se ha borrado la llave guardada. Intenta de nuevo.</div>`;
+                chatBox.innerHTML += `<div><strong>SISTEMA:</strong> Error: ${e.message}. Se borró la llave por seguridad.</div>`;
                 localStorage.removeItem('gemini_key');
             }
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
         function enviarTexto() {
-            const t = userInput.value;
-            if (t) { chatBox.innerHTML += `<div><strong>ROGELIO:</strong> ${t}</div>`; llamarGemini(t); userInput.value = ""; }
+            if (userInput.value) { chatBox.innerHTML += `<div><strong>ROGELIO:</strong> ${userInput.value}</div>`; llamarGemini(userInput.value); userInput.value = ""; }
         }
 
         function iniciarVoz() {
             const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!Rec) return alert("Usa Chrome para usar la voz.");
             const rec = new Rec();
             rec.lang = 'es-MX';
-            rec.onstart = () => document.getElementById('btnVoz').classList.add('listening');
             rec.onresult = (e) => { const t = e.results[0][0].transcript; chatBox.innerHTML += `<div><strong>ROGELIO:</strong> ${t}</div>`; llamarGemini(t); };
-            rec.onend = () => document.getElementById('btnVoz').classList.remove('listening');
             rec.start();
         }
     </script>
