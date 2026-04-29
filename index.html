@@ -55,12 +55,11 @@
     <div id="log">Logs del sistema...</div>
 
     <script>
-        // === CONFIGURACIÓN ===
         const PALABRA_ACTIVACION = "copiloto"; 
-
         const logDiv = document.getElementById('log');
+
         function logger(m) { 
-            const now = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+            const now = new Date().toLocaleTimeString();
             logDiv.innerHTML += `<div><span style="color:#444">[${now}]</span> > ${m}</div>`; 
             logDiv.scrollTop = logDiv.scrollHeight; 
         }
@@ -72,48 +71,35 @@
             window.speechSynthesis.speak(msg);
         }
 
-        // --- RECONOCIMIENTO DE VOZ ---
         const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
         recognition.lang = 'es-MX';
         recognition.continuous = true;
-        recognition.interimResults = false;
 
         recognition.onstart = () => {
-            document.getElementById('micStatus').innerHTML = "<span class='listening'>🎤 ESCUCHANDO (Dí 'Copiloto')</span>";
-            logger("Micrófono activo.");
+            document.getElementById('micStatus').innerHTML = "<span class='listening'>🎤 ESCUCHANDO</span>";
         };
 
         recognition.onresult = async (event) => {
             const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
-            logger("Escuchado: " + transcript);
-
             if (transcript.includes(PALABRA_ACTIVACION)) {
                 const comando = transcript.replace(PALABRA_ACTIVACION, "").trim();
-                if (comando.length > 2) {
-                    procesarAccion(comando);
-                } else {
-                    hablar("¿Dime Rogelio, qué necesitas para el Chrysler?");
-                }
+                comando ? procesarAccion(comando) : hablar("Dime Rogelio.");
             }
         };
 
-        recognition.onend = () => { try { recognition.start(); } catch(e) {} };
+        recognition.onend = () => { recognition.start(); };
 
-        // --- INTELIGENCIA (SIN LLAVE EN CÓDIGO) ---
         async function procesarAccion(texto) {
+            // Se recupera la llave guardada en el navegador del celular
             let llaveActual = localStorage.getItem('groq_key_rogelio');
             
-            if (!llaveActual || llaveActual === "null") {
-                llaveActual = prompt("Por seguridad, pega tu API Key de Groq aquí (solo se pide una vez):");
-                if (llaveActual) {
-                    localStorage.setItem('groq_key_rogelio', llaveActual);
-                } else {
-                    logger("Error: No hay API Key.");
-                    return;
-                }
+            if (!llaveActual) {
+                llaveActual = prompt("GitHub bloqueó la llave anterior. Pega una nueva aquí:");
+                if (llaveActual) localStorage.setItem('groq_key_rogelio', llaveActual);
+                else return;
             }
 
-            logger("Consultando a Llama 3...");
+            logger("Consultando...");
             try {
                 const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                     method: "POST",
@@ -124,55 +110,32 @@
                     body: JSON.stringify({
                         model: "llama3-8b-8192",
                         messages: [
-                            { role: "system", content: "Eres el copiloto del Chrysler 1996 de Rogelio. Responde muy breve, máximo 15 palabras." },
+                            { role: "system", content: "Eres el copiloto del Chrysler 1996 de Rogelio. Breve, máximo 15 palabras." },
                             { role: "user", content: texto }
                         ]
                     })
                 });
 
                 const data = await res.json();
-                
-                if (data.choices && data.choices[0]) {
-                    const respuesta = data.choices[0].message.content;
-                    hablar(respuesta);
-                    logger("IA: " + respuesta);
+                if (data.choices) {
+                    hablar(data.choices[0].message.content);
                 } else {
-                    logger("Error Groq: Llave inválida o expirada.");
-                    hablar("Problema con la llave. La borraré para que la pongas de nuevo.");
                     localStorage.removeItem('groq_key_rogelio');
+                    hablar("Llave inactiva. Recarga la página para poner otra.");
                 }
             } catch (e) { 
-                logger("Error: Sin conexión.");
-                hablar("No tengo internet para pensar, Rogelio.");
+                hablar("Error de conexión.");
             }
         }
 
-        // --- BOTONES ---
         document.getElementById('sendBtn').onclick = () => {
             const val = document.getElementById('userInput').value;
             if(val) { procesarAccion(val); document.getElementById('userInput').value = ""; }
         };
 
-        document.getElementById('btnConectar').onclick = async () => {
-            try {
-                recognition.start();
-                logger("Buscando OBD2 vía Bluetooth...");
-                
-                // Filtro estándar para adaptadores ELM327
-                const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ services: ['00001101-0000-1000-8000-00805f9b34fb'] }],
-                    optionalServices: ['00001101-0000-1000-8000-00805f9b34fb']
-                });
-                
-                const server = await device.gatt.connect();
-                document.getElementById('status').innerText = "✅ SCANNER CONECTADO";
-                document.getElementById('climaText').innerText = "Motor monitoreado";
-                hablar("Sistema listo, Rogelio. Chrysler conectado.");
-                logger("Conexión GATT establecida.");
-            } catch (e) { 
-                logger("Aviso: Bluetooth no vinculado.");
-                hablar("Voz activada, pero el scanner no responde. Revisa el puerto OBD2.");
-            }
+        document.getElementById('btnConectar').onclick = () => {
+            recognition.start();
+            hablar("Voz activa. Chrysler listo.");
         };
     </script>
 </body>
