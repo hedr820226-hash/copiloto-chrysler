@@ -3,165 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="manifest" href="manifest.json">
-    <title>ApexDash Pro - Chrysler 1996</title>
+    <title>ApexDash - Gemini Lite</title>
     <style>
-        :root { --accent: #e67e22; --bg: #121212; --card: #1e1e1e; }
+        :root { --accent: #3498db; --bg: #0d0d0d; --card: #1a1a1a; }
         body { font-family: sans-serif; background: var(--bg); color: white; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 500px; }
-        .card { background: var(--card); padding: 15px; border-radius: 15px; text-align: center; border: 1px solid #333; }
-        .full { grid-column: span 2; }
-        .value { font-size: 2.2em; font-weight: bold; color: var(--accent); display: block; }
-        button { background: var(--accent); border: none; padding: 15px; color: white; border-radius: 30px; font-weight: bold; width: 100%; cursor: pointer; font-size: 1em; }
-        input { width: 70%; padding: 12px; border-radius: 20px; border: 1px solid #444; background: #000; color: white; outline: none; }
-        #log { width: 100%; max-width: 500px; font-family: monospace; font-size: 0.75em; color: #666; margin-top: 15px; height: 80px; overflow-y: auto; background: #000; padding: 10px; border-radius: 10px; border: 1px solid #222; }
-        .listening { color: #2ecc71; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 500px; margin-bottom: 20px; }
+        .card { background: var(--card); padding: 20px; border-radius: 15px; text-align: center; border: 1px solid #333; }
+        .value { font-size: 2.5em; font-weight: bold; color: var(--accent); }
+        #chat-container { width: 100%; max-width: 500px; background: var(--card); border-radius: 15px; border: 1px solid var(--accent); padding: 15px; box-sizing: border-box; }
+        #chat-box { height: 200px; overflow-y: auto; font-size: 0.95em; margin-bottom: 15px; color: #eee; text-align: left; background: #000; padding: 15px; border-radius: 10px; }
+        .btn-voice { background: var(--accent); color: white; border: none; padding: 15px; width: 100%; font-size: 1.1em; border-radius: 10px; cursor: pointer; }
+        .listening { background: #e74c3c !important; }
     </style>
 </head>
 <body>
 
-    <h1 style="color: var(--accent); margin-bottom: 5px;">ApexDash 🚗🤖</h1>
-    <div id="status" style="margin-bottom:15px; font-size:0.8em; color:#2ecc71;">Sistemas en espera...</div>
+    <h1 style="color: var(--accent);">ApexDash 🚗🤖</h1>
+    <p style="font-size: 0.8em; color: #888;">Cerebro: Gemini 2.5 Flash Lite</p>
 
     <div class="grid">
-        <div class="card full">
-            <button id="btnConectar">1. CONECTAR SCANNER Y VOZ</button>
-        </div>
-
-        <div class="card">
-            <small>RPM</small>
-            <span id="rpm" class="value">0</span>
-        </div>
-
-        <div class="card">
-            <small>KM/H</small>
-            <span id="kmh" class="value">0</span>
-        </div>
-
-        <div class="card">
-            <small>TEMP. MOTOR</small>
-            <span id="temp" class="value">0°C</span>
-        </div>
-
-        <div class="card">
-            <small>VOLTAJE</small>
-            <span id="volt" class="value">0V</span>
-        </div>
-
-        <div class="card full">
-            <div id="micStatus">🎤 Micrófono apagado</div>
-            <div style="display: flex; gap: 10px; margin-top: 10px;">
-                <input type="text" id="userInput" placeholder="Dí 'Copiloto' o escribe...">
-                <button id="sendBtn" style="width: 25%;">➔</button>
-            </div>
-        </div>
-
-        <div class="card full">
-            <small>ESTADO DEL SISTEMA</small>
-            <div id="climaText" style="font-style: italic; font-size: 0.9em;">Esperando conexión OBD2...</div>
-        </div>
+        <div class="card"><small>RPM</small><div class="value">0</div></div>
+        <div class="card"><small>KM/H</small><div class="value">0</div></div>
     </div>
 
-    <div id="log">Logs del sistema...</div>
+    <div id="chat-container">
+        <div id="chat-box"><strong>COPILOTO:</strong> Rogelio, listo para el Chrysler. Presiona para hablar.</div>
+        <button class="btn-voice" id="btnVoz" onclick="iniciarVoz()">🎤 HABLAR POR VOZ</button>
+    </div>
 
     <script>
-        const PALABRA_ACTIVACION = "copiloto";
-        let obdCharacteristic;
-        const logDiv = document.getElementById('log');
+        const chatBox = document.getElementById('chat-box');
 
-        function logger(m) { 
-            logDiv.innerHTML += `<div>> ${m}</div>`; 
-            logDiv.scrollTop = logDiv.scrollHeight; 
-        }
-
-        function hablar(texto) {
+        function hablar(t) {
             window.speechSynthesis.cancel();
-            const msg = new SpeechSynthesisUtterance(texto);
-            msg.lang = 'es-MX';
-            window.speechSynthesis.speak(msg);
+            const u = new SpeechSynthesisUtterance(t);
+            u.lang = 'es-MX';
+            window.speechSynthesis.speak(u);
         }
 
-        // --- RECONOCIMIENTO DE VOZ ---
-        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-        recognition.lang = 'es-MX';
-        recognition.continuous = true;
+        function msg(q, t) {
+            chatBox.innerHTML += `<div style="margin-top:10px;"><strong>${q}:</strong> ${t}</div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
 
-        recognition.onstart = () => {
-            document.getElementById('micStatus').innerHTML = "<span class='listening'>🎤 ESCUCHANDO...</span>";
-            logger("Voz activa.");
-        };
-
-        recognition.onresult = async (event) => {
-            const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
-            logger("Oído: " + transcript);
-
-            if (transcript.includes(PALABRA_ACTIVACION)) {
-                const comando = transcript.replace(PALABRA_ACTIVACION, "").trim();
-                procesarIA(comando || "hola");
-            }
-        };
-
-        recognition.onend = () => { try { recognition.start(); } catch(e) {} };
-
-        // --- CONEXIÓN OBD2 (Web Bluetooth) ---
-        document.getElementById('btnConectar').onclick = async () => {
-            try {
-                recognition.start();
-                logger("Buscando ELM327...");
-                const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ services: ['00001101-0000-1000-8000-00805f9b34fb'] }],
-                    optionalServices: ['00001101-0000-1000-8000-00805f9b34fb']
-                });
-                const server = await device.gatt.connect();
-                document.getElementById('status').innerText = "✅ CHRYSLER CONECTADO";
-                hablar("Conexión establecida. Monitoreando el motor.");
-            } catch (e) {
-                logger("Aviso: Bluetooth no conectado.");
-                hablar("Voz lista. Esperando scanner.");
-            }
-        };
-
-        // --- PROCESAMIENTO IA (Groq) ---
-        async function procesarIA(texto) {
-            let llave = localStorage.getItem('groq_key');
-            if (!llave) {
-                llave = prompt("Pega tu API Key de Groq:");
-                if (llave) localStorage.setItem('groq_key', llave.trim());
+        async function llamarGemini(texto) {
+            let k = localStorage.getItem('gemini_key');
+            if (!k) {
+                k = prompt("Pega tu API KEY de Google (Gemini):");
+                if (k) localStorage.setItem('gemini_key', k.trim());
                 else return;
             }
 
-            logger("IA Pensando...");
+            msg("SISTEMA", "Pensando...");
+            
+            // URL oficial de Google Gemini 2.5 Flash Lite
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-lite:generateContent?key=${k}`;
+
             try {
-                const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                const r = await fetch(url, {
                     method: "POST",
-                    headers: { "Authorization": `Bearer ${llave}`, "Content-Type": "application/json" },
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        model: "llama3-8b-8192",
-                        messages: [{ role: "system", content: "Eres el copiloto del Chrysler 1996 de Rogelio. Sé breve y técnico." },
-                                   { role: "user", content: texto }]
+                        contents: [{ parts: [{ text: "Eres el copiloto del Chrysler 96 de Rogelio. Sé breve y mecánico. Pregunta: " + texto }] }]
                     })
                 });
-                const data = await res.json();
-                if (data.choices) {
-                    const r = data.choices[0].message.content;
-                    hablar(r);
-                    logger("IA: " + r);
-                } else {
-                    localStorage.removeItem('groq_key');
-                    logger("Error: Llave inválida.");
-                }
-            } catch (e) { logger("Error de red."); }
+                
+                const d = await r.json();
+                const respuesta = d.candidates[0].content.parts[0].text;
+                
+                chatBox.lastChild.remove();
+                msg("COPILOTO", respuesta);
+                hablar(respuesta);
+            } catch (e) {
+                msg("SISTEMA", "Error de llave. Intenta pegarla de nuevo.");
+                localStorage.removeItem('gemini_key');
+            }
         }
 
-        document.getElementById('sendBtn').onclick = () => {
-            const v = document.getElementById('userInput').value;
-            if(v) { procesarIA(v); document.getElementById('userInput').value = ""; }
-        };
-
-        // Registro PWA
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
+        function iniciarVoz() {
+            const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!Rec) return alert("Navegador no soportado");
+            const rec = new Rec();
+            rec.lang = 'es-MX';
+            rec.onstart = () => { document.getElementById('btnVoz').classList.add('listening'); };
+            rec.onresult = (e) => {
+                const t = e.results[0][0].transcript;
+                msg("ROGELIO", t);
+                llamarGemini(t);
+                document.getElementById('btnVoz').classList.remove('listening');
+            };
+            rec.start();
         }
     </script>
 </body>
