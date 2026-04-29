@@ -14,7 +14,7 @@
         button { background: var(--accent); border: none; padding: 15px; color: white; border-radius: 30px; font-weight: bold; width: 100%; cursor: pointer; }
         input { width: 70%; padding: 12px; border-radius: 20px; border: 1px solid #444; background: #000; color: white; outline: none; }
         #log { width: 100%; max-width: 500px; font-family: monospace; font-size: 0.7em; color: #555; margin-top: 15px; height: 50px; overflow-y: auto; background: #000; padding: 10px; border-radius: 10px; }
-        .listening { color: #e74c3c; font-weight: bold; animation: pulse 1.5s infinite; }
+        .listening { color: #2ecc71; font-weight: bold; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
     </style>
 </head>
@@ -41,39 +41,36 @@
         <div class="card full">
             <div id="micStatus">🎤 Micrófono apagado</div>
             <div style="display: flex; gap: 10px; margin-top: 10px;">
-                <input type="text" id="userInput" placeholder="Escribe aquí...">
+                <input type="text" id="userInput" placeholder="Escribe o espera a ser escuchado...">
                 <button id="sendBtn" style="width: 25%;">➔</button>
             </div>
         </div>
 
         <div class="card full">
-            <small>ESTADO Y CLIMA</small>
-            <div id="climaText" style="font-style: italic; font-size: 0.9em;">-</div>
+            <small>ESTADO DEL SISTEMA</small>
+            <div id="climaText" style="font-style: italic; font-size: 0.9em;">Esperando conexión OBD2...</div>
         </div>
     </div>
 
     <div id="log">Logs...</div>
 
     <script>
-        // === CONFIGURACIÓN ===
-        const GROQ_KEY = ""; 
-        const CLIMA_KEY = "TU_API_KEY_OPENWEATHER";
-        const CIUDAD = "Villahermosa,MX";
-        const PALABRA_ACTIVACION = "Roy"; 
+        // === CONFIGURACIÓN SEGURA ===
+        const GROQ_KEY_MANUAL = ""; // Déjala vacía, el código te la pedirá en el cel.
+        const PALABRA_ACTIVACION = "copiloto"; 
 
         let scannerChar;
         const logDiv = document.getElementById('log');
         function logger(m) { logDiv.innerHTML += `<div>> ${m}</div>`; logDiv.scrollTop = logDiv.scrollHeight; }
 
-        // --- VOZ (SALIDA) ---
         function hablar(texto) {
-            window.speechSynthesis.cancel(); // Detener si estaba hablando
+            window.speechSynthesis.cancel();
             const msg = new SpeechSynthesisUtterance(texto);
             msg.lang = 'es-MX';
             window.speechSynthesis.speak(msg);
         }
 
-        // --- RECONOCIMIENTO DE VOZ (ENTRADA) ---
+        // --- RECONOCIMIENTO DE VOZ ---
         const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
         recognition.lang = 'es-MX';
         recognition.continuous = true;
@@ -92,29 +89,44 @@
                 if (comando.length > 2) {
                     procesarAccion(comando);
                 } else {
-                    hablar("¿Dime Rogelio, en qué te ayudo?");
+                    hablar("¿Dime Rogelio, qué necesitas para el Chrysler?");
                 }
             }
         };
 
-        recognition.onend = () => { recognition.start(); }; // Mantener siempre activo
+        recognition.onend = () => { try { recognition.start(); } catch(e) {} };
 
-        // --- INTELIGENCIA (GROQ) ---
+        // --- INTELIGENCIA (CON MEMORIA DE LLAVE) ---
         async function procesarAccion(texto) {
-            logger("Procesando: " + texto);
+            let llaveActual = localStorage.getItem('groq_key_rogelio');
+            
+            if (!llaveActual) {
+                llaveActual = prompt("GitHub bloqueó tu llave anterior. Por favor pega tu API Key de Groq aquí para guardarla en el celular:");
+                if (llaveActual) localStorage.setItem('groq_key_rogelio', llaveActual);
+            }
+
+            logger("Procesando con IA...");
             try {
                 const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                     method: "POST",
-                    headers: { "Authorization": `Bearer ${GROQ_KEY}`, "Content-Type": "application/json" },
+                    headers: { "Authorization": `Bearer ${llaveActual}`, "Content-Type": "application/json" },
                     body: JSON.stringify({
                         model: "llama3-8b-8192",
-                        messages: [{ role: "system", content: "Eres el copiloto del Chrysler de Rogelio. Responde de forma muy breve y útil." },
+                        messages: [{ role: "system", content: "Eres el copiloto del Chrysler 1996 de Rogelio. Responde muy breve, máximo 15 palabras." },
                                    { role: "user", content: texto }]
                     })
                 });
                 const data = await res.json();
-                hablar(data.choices[0].message.content);
-            } catch (e) { logger("Error Groq"); }
+                if (data.choices) {
+                    hablar(data.choices[0].message.content);
+                } else {
+                    hablar("Error en la llave de Groq. La borraré para que la pongas de nuevo.");
+                    localStorage.removeItem('groq_key_rogelio');
+                }
+            } catch (e) { 
+                logger("Error de conexión a internet.");
+                hablar("No tengo internet para pensar, Rogelio.");
+            }
         }
 
         // --- BOTONES ---
@@ -125,24 +137,19 @@
 
         document.getElementById('btnConectar').onclick = async () => {
             try {
-                // Iniciar Voz
                 recognition.start();
-                
-                // Conectar Bluetooth
                 logger("Buscando OBD2...");
                 const device = await navigator.bluetooth.requestDevice({
                     filters: [{ services: ['00001101-0000-1000-8000-00805f9b34fb'] }],
                     optionalServices: ['00001101-0000-1000-8000-00805f9b34fb']
                 });
                 const server = await device.gatt.connect();
-                const service = await server.getPrimaryService('00001101-0000-1000-8000-00805f9b34fb');
-                scannerChar = await service.getCharacteristic('00001101-0000-1000-8000-00805f9b34fb');
-                
-                document.getElementById('status').innerText = "✅ SISTEMAS ONLINE";
-                hablar("Hola Rogelio. Scanner conectado y micrófono activo. Solo dime Copiloto y tu comando.");
+                document.getElementById('status').innerText = "✅ SCANNER CONECTADO";
+                document.getElementById('climaText').innerText = "Motor monitoreado";
+                hablar("Sistema listo, Rogelio. Chrysler conectado.");
             } catch (e) { 
-                logger("Error inicial: " + e);
-                recognition.start(); // Aunque falle Bluetooth, que funcione la voz
+                logger("Aviso: Bluetooth no conectado.");
+                hablar("Voz activada, pero el scanner no responde. Revisa el puerto OBD2.");
             }
         };
     </script>
