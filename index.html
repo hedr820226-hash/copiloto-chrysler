@@ -1,97 +1,98 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ApexDash Pro - Copiloto</title>
-    <style>
-        :root { --accent: #3498db; --bg: #0d0d0d; --card: #1a1a1a; }
-        body { font-family: sans-serif; background: var(--bg); color: white; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 500px; margin-bottom: 20px; }
-        .card { background: var(--card); padding: 20px; border-radius: 15px; text-align: center; border: 1px solid #333; }
-        .value { font-size: 2.5em; font-weight: bold; color: var(--accent); }
-        #chat-container { width: 100%; max-width: 500px; background: var(--card); border-radius: 15px; border: 2px solid var(--accent); padding: 15px; box-sizing: border-box; }
-        #chat-box { height: 250px; overflow-y: auto; font-size: 0.95em; margin-bottom: 15px; color: #eee; text-align: left; background: #000; padding: 15px; border-radius: 10px; }
-        .input-group { display: flex; gap: 10px; margin-bottom: 10px; }
-        input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #444; background: #000; color: white; outline: none; }
-        .btn-send { background: var(--accent); border: none; padding: 10px 20px; color: white; border-radius: 10px; cursor: pointer; }
-        .btn-voice { background: #2c3e50; color: white; border: none; padding: 15px; width: 100%; font-size: 1.1em; border-radius: 10px; cursor: pointer; }
-    </style>
-</head>
-<body>
-    <h1 style="color: var(--accent);">ApexDash 🚗🤖</h1>
-    <div class="grid">
-        <div class="card"><small>RPM</small><div class="value">0</div></div>
-        <div class="card"><small>KM/H</small><div class="value">0</div></div>
-    </div>
-    <div id="chat-container">
-        <div id="chat-box"><strong>COPILOTO:</strong> Listo, Rogelio. Pega la llave de Google AI Studio.</div>
-        <div class="input-group">
-            <input type="text" id="userInput" placeholder="Escribe al copiloto...">
-            <button class="btn-send" onclick="enviarTexto()">➔</button>
-        </div>
-        <button class="btn-voice" onclick="iniciarVoz()">🎤 HABLAR POR VOZ</button>
-    </div>
+<!-- ... (tu CSS y HTML se mantienen igual) ... -->
 
-    <script>
-        const chatBox = document.getElementById('chat-box');
-        const userInput = document.getElementById('userInput');
+<script>
+    const chatBox = document.getElementById('chat-box');
+    const userInput = document.getElementById('userInput');
 
-        function hablar(t) {
-            window.speechSynthesis.cancel();
-            const u = new SpeechSynthesisUtterance(t);
-            u.lang = 'es-MX';
-            window.speechSynthesis.speak(u);
+    function hablar(t) {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(t);
+        u.lang = 'es-MX';
+        window.speechSynthesis.speak(u);
+    }
+
+    async function llamarGemini(texto) {
+        let k = localStorage.getItem('gemini_key');
+        
+        // 1. Verificación de la llave
+        if (!k || k === "null") {
+            k = prompt("Pega tu API KEY de Google AI Studio (debe empezar con AIza):");
+            if (k && k.trim().startsWith("AIza")) { 
+                k = k.trim(); 
+                localStorage.setItem('gemini_key', k); 
+            } else {
+                chatBox.innerHTML += `<div><strong>SISTEMA:</strong> Llave no válida. Asegúrate de que empiece con AIza.</div>`;
+                return;
+            }
         }
 
-        async function llamarGemini(texto) {
-            let k = localStorage.getItem('gemini_key');
-            if (!k) {
-                k = prompt("Pega tu API KEY (AIza...):");
-                if (k) { k = k.trim(); localStorage.setItem('gemini_key', k); }
-                else return;
-            }
+        const msgDiv = document.createElement('div');
+        msgDiv.innerHTML = `<strong>SISTEMA:</strong> Pensando...`;
+        chatBox.appendChild(msgDiv);
+        
+        // URL para Gemini 1.5 Flash
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${k}`;
 
-            chatBox.innerHTML += `<div><strong>SISTEMA:</strong> Analizando...</div>`;
+        try {
+            const r = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                // CORRECCIÓN: La estructura del JSON debe ser exacta
+                body: JSON.stringify({ 
+                    contents: [{ 
+                        parts: [{ text: "Eres un copiloto mecánico experto. Responde de forma breve y técnica a: " + texto }] 
+                    }] 
+                })
+            });
             
-            // URL CORREGIDA: Usando gemini-1.5-flash que es la más estable
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${k}`;
-
-            try {
-                const r = await fetch(url, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: "Responde muy breve como copiloto mecánico: " + texto }] }] })
-                });
-                
-                const d = await r.json();
-                
-                if (d.error) {
-                    throw new Error(d.error.message);
+            const d = await r.json();
+            
+            if (d.error) {
+                // Si el error es de autenticación, borramos la llave
+                if(d.error.status === "UNAUTHENTICATED") {
+                    localStorage.removeItem('gemini_key');
                 }
-
-                const respuesta = d.candidates[0].content.parts[0].text;
-                chatBox.lastChild.remove();
-                chatBox.innerHTML += `<div><strong>COPILOTO:</strong> ${respuesta}</div>`;
-                hablar(respuesta);
-            } catch (e) {
-                chatBox.innerHTML += `<div><strong>SISTEMA:</strong> Error: ${e.message}. Se borró la llave por seguridad.</div>`;
-                localStorage.removeItem('gemini_key');
+                throw new Error(d.error.message);
             }
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
 
-        function enviarTexto() {
-            if (userInput.value) { chatBox.innerHTML += `<div><strong>ROGELIO:</strong> ${userInput.value}</div>`; llamarGemini(userInput.value); userInput.value = ""; }
-        }
+            // CORRECCIÓN: Acceso seguro a la respuesta
+            if (d.candidates && d.candidates[0].content) {
+                const respuesta = d.candidates[0].content.parts[0].text;
+                msgDiv.innerHTML = `<strong>COPILOTO:</strong> ${respuesta}`;
+                hablar(respuesta);
+            } else {
+                throw new Error("Respuesta vacía de la API");
+            }
 
-        function iniciarVoz() {
-            const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
-            const rec = new Rec();
-            rec.lang = 'es-MX';
-            rec.onresult = (e) => { const t = e.results[0][0].transcript; chatBox.innerHTML += `<div><strong>ROGELIO:</strong> ${t}</div>`; llamarGemini(t); };
-            rec.start();
+        } catch (e) {
+            msgDiv.innerHTML = `<strong>SISTEMA:</strong> Error: ${e.message}`;
+            console.error("Error completo:", e);
         }
-    </script>
-</body>
-</html>
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // ... (tus funciones enviarTexto e iniciarVoz están bien) ...
+    function enviarTexto() {
+        if (userInput.value.trim()) { 
+            chatBox.innerHTML += `<div><strong>ROGELIO:</strong> ${userInput.value}</div>`; 
+            llamarGemini(userInput.value); 
+            userInput.value = ""; 
+        }
+    }
+
+    function iniciarVoz() {
+        const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!Rec) {
+            alert("Tu navegador no soporta reconocimiento de voz.");
+            return;
+        }
+        const rec = new Rec();
+        rec.lang = 'es-MX';
+        rec.onresult = (e) => { 
+            const t = e.results[0][0].transcript; 
+            chatBox.innerHTML += `<div><strong>ROGELIO:</strong> ${t}</div>`; 
+            llamarGemini(t); 
+        };
+        rec.start();
+    }
+</script>
