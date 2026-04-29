@@ -3,29 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Copiloto Rogelio Pro</title>
+    <link rel="manifest" href="manifest.json">
+    <title>ApexDash Pro - Chrysler 1996</title>
     <style>
         :root { --accent: #e67e22; --bg: #121212; --card: #1e1e1e; }
         body { font-family: sans-serif; background: var(--bg); color: white; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 500px; }
         .card { background: var(--card); padding: 15px; border-radius: 15px; text-align: center; border: 1px solid #333; }
         .full { grid-column: span 2; }
-        .value { font-size: 2em; font-weight: bold; color: var(--accent); display: block; }
-        button { background: var(--accent); border: none; padding: 15px; color: white; border-radius: 30px; font-weight: bold; width: 100%; cursor: pointer; }
+        .value { font-size: 2.2em; font-weight: bold; color: var(--accent); display: block; }
+        button { background: var(--accent); border: none; padding: 15px; color: white; border-radius: 30px; font-weight: bold; width: 100%; cursor: pointer; font-size: 1em; }
         input { width: 70%; padding: 12px; border-radius: 20px; border: 1px solid #444; background: #000; color: white; outline: none; }
-        #log { width: 100%; max-width: 500px; font-family: monospace; font-size: 0.7em; color: #555; margin-top: 15px; height: 80px; overflow-y: auto; background: #000; padding: 10px; border-radius: 10px; border: 1px solid #222; }
-        .listening { color: #2ecc71; font-weight: bold; animation: pulse 1.5s infinite; }
+        #log { width: 100%; max-width: 500px; font-family: monospace; font-size: 0.75em; color: #666; margin-top: 15px; height: 80px; overflow-y: auto; background: #000; padding: 10px; border-radius: 10px; border: 1px solid #222; }
+        .listening { color: #2ecc71; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
 
-    <h1>Copiloto Rogelio 🚗🤖</h1>
-    <div id="status" style="margin-bottom:10px; font-size:0.8em; color:#2ecc71;">Sistemas en espera...</div>
+    <h1 style="color: var(--accent); margin-bottom: 5px;">ApexDash 🚗🤖</h1>
+    <div id="status" style="margin-bottom:15px; font-size:0.8em; color:#2ecc71;">Sistemas en espera...</div>
 
     <div class="grid">
         <div class="card full">
-            <button id="btnConectar">1. CONECTAR Y ACTIVAR VOZ</button>
+            <button id="btnConectar">1. CONECTAR SCANNER Y VOZ</button>
         </div>
 
         <div class="card">
@@ -38,10 +39,20 @@
             <span id="kmh" class="value">0</span>
         </div>
 
+        <div class="card">
+            <small>TEMP. MOTOR</small>
+            <span id="temp" class="value">0°C</span>
+        </div>
+
+        <div class="card">
+            <small>VOLTAJE</small>
+            <span id="volt" class="value">0V</span>
+        </div>
+
         <div class="card full">
             <div id="micStatus">🎤 Micrófono apagado</div>
             <div style="display: flex; gap: 10px; margin-top: 10px;">
-                <input type="text" id="userInput" placeholder="Escribe o dí 'Copiloto'...">
+                <input type="text" id="userInput" placeholder="Dí 'Copiloto' o escribe...">
                 <button id="sendBtn" style="width: 25%;">➔</button>
             </div>
         </div>
@@ -55,12 +66,12 @@
     <div id="log">Logs del sistema...</div>
 
     <script>
-        const PALABRA_ACTIVACION = "copiloto"; 
+        const PALABRA_ACTIVACION = "copiloto";
+        let obdCharacteristic;
         const logDiv = document.getElementById('log');
 
         function logger(m) { 
-            const now = new Date().toLocaleTimeString();
-            logDiv.innerHTML += `<div><span style="color:#444">[${now}]</span> > ${m}</div>`; 
+            logDiv.innerHTML += `<div>> ${m}</div>`; 
             logDiv.scrollTop = logDiv.scrollHeight; 
         }
 
@@ -71,72 +82,87 @@
             window.speechSynthesis.speak(msg);
         }
 
+        // --- RECONOCIMIENTO DE VOZ ---
         const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
         recognition.lang = 'es-MX';
         recognition.continuous = true;
 
         recognition.onstart = () => {
-            document.getElementById('micStatus').innerHTML = "<span class='listening'>🎤 ESCUCHANDO</span>";
+            document.getElementById('micStatus').innerHTML = "<span class='listening'>🎤 ESCUCHANDO...</span>";
+            logger("Voz activa.");
         };
 
         recognition.onresult = async (event) => {
             const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
+            logger("Oído: " + transcript);
+
             if (transcript.includes(PALABRA_ACTIVACION)) {
                 const comando = transcript.replace(PALABRA_ACTIVACION, "").trim();
-                comando ? procesarAccion(comando) : hablar("Dime Rogelio.");
+                procesarIA(comando || "hola");
             }
         };
 
-        recognition.onend = () => { recognition.start(); };
+        recognition.onend = () => { try { recognition.start(); } catch(e) {} };
 
-        async function procesarAccion(texto) {
-            // Se recupera la llave guardada en el navegador del celular
-            let llaveActual = localStorage.getItem('groq_key_rogelio');
-            
-            if (!llaveActual) {
-                llaveActual = prompt("GitHub bloqueó la llave anterior. Pega una nueva aquí:");
-                if (llaveActual) localStorage.setItem('groq_key_rogelio', llaveActual);
+        // --- CONEXIÓN OBD2 (Web Bluetooth) ---
+        document.getElementById('btnConectar').onclick = async () => {
+            try {
+                recognition.start();
+                logger("Buscando ELM327...");
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ services: ['00001101-0000-1000-8000-00805f9b34fb'] }],
+                    optionalServices: ['00001101-0000-1000-8000-00805f9b34fb']
+                });
+                const server = await device.gatt.connect();
+                document.getElementById('status').innerText = "✅ CHRYSLER CONECTADO";
+                hablar("Conexión establecida. Monitoreando el motor.");
+            } catch (e) {
+                logger("Aviso: Bluetooth no conectado.");
+                hablar("Voz lista. Esperando scanner.");
+            }
+        };
+
+        // --- PROCESAMIENTO IA (Groq) ---
+        async function procesarIA(texto) {
+            let llave = localStorage.getItem('groq_key');
+            if (!llave) {
+                llave = prompt("Pega tu API Key de Groq:");
+                if (llave) localStorage.setItem('groq_key', llave.trim());
                 else return;
             }
 
-            logger("Consultando...");
+            logger("IA Pensando...");
             try {
                 const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                     method: "POST",
-                    headers: { 
-                        "Authorization": `Bearer ${llaveActual}`, 
-                        "Content-Type": "application/json" 
-                    },
+                    headers: { "Authorization": `Bearer ${llave}`, "Content-Type": "application/json" },
                     body: JSON.stringify({
                         model: "llama3-8b-8192",
-                        messages: [
-                            { role: "system", content: "Eres el copiloto del Chrysler 1996 de Rogelio. Breve, máximo 15 palabras." },
-                            { role: "user", content: texto }
-                        ]
+                        messages: [{ role: "system", content: "Eres el copiloto del Chrysler 1996 de Rogelio. Sé breve y técnico." },
+                                   { role: "user", content: texto }]
                     })
                 });
-
                 const data = await res.json();
                 if (data.choices) {
-                    hablar(data.choices[0].message.content);
+                    const r = data.choices[0].message.content;
+                    hablar(r);
+                    logger("IA: " + r);
                 } else {
-                    localStorage.removeItem('groq_key_rogelio');
-                    hablar("Llave inactiva. Recarga la página para poner otra.");
+                    localStorage.removeItem('groq_key');
+                    logger("Error: Llave inválida.");
                 }
-            } catch (e) { 
-                hablar("Error de conexión.");
-            }
+            } catch (e) { logger("Error de red."); }
         }
 
         document.getElementById('sendBtn').onclick = () => {
-            const val = document.getElementById('userInput').value;
-            if(val) { procesarAccion(val); document.getElementById('userInput').value = ""; }
+            const v = document.getElementById('userInput').value;
+            if(v) { procesarIA(v); document.getElementById('userInput').value = ""; }
         };
 
-        document.getElementById('btnConectar').onclick = () => {
-            recognition.start();
-            hablar("Voz activa. Chrysler listo.");
-        };
+        // Registro PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
     </script>
 </body>
 </html>
