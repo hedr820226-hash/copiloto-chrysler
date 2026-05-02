@@ -17,44 +17,45 @@ body{
     color:white;
 }
 
-/* HEADER */
-.header{
-    text-align:center;
-    font-size:2em;
-    color:var(--cyan);
+/* GRID */
+.container{
+    display:grid;
+    grid-template-columns: 300px 1fr 300px;
+    gap:10px;
     padding:10px;
-    text-shadow:0 0 15px var(--cyan);
-}
-
-/* LAYOUT */
-.main{
-    display:flex;
-    height:80vh;
 }
 
 /* PANEL */
 .panel{
-    flex:1;
-    margin:10px;
-    padding:15px;
     border:1px solid var(--cyan);
     border-radius:15px;
-    background:rgba(0,30,60,0.6);
+    padding:15px;
+    background:rgba(0,30,60,0.5);
 }
 
-/* CONSOLA */
+/* HEADER */
+.header{
+    grid-column: span 3;
+    text-align:center;
+    font-size:2em;
+    color:var(--cyan);
+    text-shadow:0 0 15px var(--cyan);
+}
+
+/* CARRO */
+.car{
+    width:100%;
+    border-radius:10px;
+}
+
+/* CHAT */
 #output{
-    height:60%;
+    height:250px;
     overflow:auto;
     color:var(--cyan);
-    font-size:1.2em;
 }
 
 /* INPUT */
-.input-area{
-    margin-top:10px;
-}
-
 input{
     width:70%;
     padding:10px;
@@ -67,70 +68,64 @@ button{
     padding:10px;
     background:var(--cyan);
     border:none;
-    cursor:pointer;
 }
 
 /* MIC */
 .mic{
-    position:fixed;
-    bottom:20px;
-    left:50%;
-    transform:translateX(-50%);
+    text-align:center;
+    margin-top:10px;
 }
 
 .btn-mic{
-    width:110px;
-    height:110px;
+    width:90px;
+    height:90px;
     border-radius:50%;
     background:var(--cyan);
-    box-shadow:0 0 40px var(--cyan);
-    border:none;
-}
-
-/* ESTADO */
-.estado{
-    text-align:center;
-    color:#aaa;
+    box-shadow:0 0 30px var(--cyan);
 }
 </style>
 </head>
 
 <body>
 
-<div class="header">DASH - COPILOTO</div>
+<div class="container">
 
-<div class="main">
+<div class="header">DASH - COPILOTO INTELIGENTE</div>
 
+<!-- IZQUIERDA -->
 <div class="panel">
-<h3>CONTROL</h3>
-<p>Di: <b>"Dash"</b> + comando</p>
-<p>Ejemplo: Dash abre YouTube</p>
-</div>
-
-<div class="panel">
+<img src="logo_apexdash.svg" width="100">
 <h3>DASH</h3>
 
-<div id="output">Sistema iniciando...</div>
+<p>Di: "Dash"</p>
+<p>Ej: Dash abre YouTube</p>
 
-<div class="input-area">
-<input id="input" placeholder="Escribe comando...">
-<button onclick="enviarTexto()">ENVIAR</button>
+<div class="mic">
+<button class="btn-mic" onclick="toggleMic()"></button>
+<p id="estado">Mic apagado</p>
+</div>
 </div>
 
-<div class="estado" id="estado">Micrófono apagado</div>
-</div>
-
+<!-- CENTRO -->
 <div class="panel">
-<h3>ESTADO VEHÍCULO</h3>
+
+<img src="carro.png" class="car">
+
+<div id="output">Iniciando sistema...</div>
+
+<input id="input" placeholder="Escribe comando...">
+<button onclick="enviar()">ENVIAR</button>
+
+</div>
+
+<!-- DERECHA -->
+<div class="panel">
+<h3>ESTADO</h3>
 <p>Motor: Óptimo</p>
 <p>Temp: 90°C</p>
 <p>Voltaje: 14V</p>
 </div>
 
-</div>
-
-<div class="mic">
-<button class="btn-mic" onclick="toggleMic()"></button>
 </div>
 
 <script>
@@ -140,12 +135,10 @@ const estado = document.getElementById("estado");
 let escuchando = false;
 
 /* VOZ */
-function hablar(texto){
+function hablar(t){
     speechSynthesis.cancel();
-    const m = new SpeechSynthesisUtterance(texto);
+    const m = new SpeechSynthesisUtterance(t);
     m.lang='es-MX';
-    m.rate=0.95;
-    m.pitch=0.9;
     speechSynthesis.speak(m);
 }
 
@@ -153,90 +146,73 @@ function hablar(texto){
 function msg(t){
     output.innerHTML += "<br>Dash: "+t;
     hablar(t);
-    output.scrollTop=output.scrollHeight;
 }
 
 /* INICIO */
 window.onload = ()=>{
     msg("Escaneando vehículo...");
     setTimeout(()=>msg("Todo en orden."),2000);
-    setTimeout(()=>msg("Dash lista. Di 'Dash' para activar."),3500);
+    setTimeout(()=>msg("Dash lista."),3000);
 }
 
 /* API */
 async function procesar(t){
     output.innerHTML += "<br>> "+t;
 
+    const r = await fetch('/api/asistente',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({code:t})
+    });
+
+    const d = await r.json();
+
     try{
-        const r = await fetch('/api/asistente',{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({code:t})
-        });
+        const obj = JSON.parse(d.respuesta);
+        if(obj.tipo==="accion"){
+            window.open(obj.url);
+            msg(obj.mensaje);
+            return;
+        }
+    }catch{}
 
-        const d = await r.json();
-
-        try{
-            const obj = JSON.parse(d.respuesta);
-            if(obj.tipo==="accion"){
-                window.open(obj.url);
-                msg(obj.mensaje);
-                return;
-            }
-        }catch{}
-
-        msg(d.respuesta);
-
-    }catch{
-        msg("Error de conexión");
-    }
+    msg(d.respuesta);
 }
 
 /* INPUT */
-function enviarTexto(){
+function enviar(){
     const t = document.getElementById("input").value;
     if(t) procesar(t);
     document.getElementById("input").value="";
 }
 
-/* VOZ REAL */
+/* VOZ */
 const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
 rec.lang='es-MX';
 rec.continuous=true;
-rec.interimResults=false;
 
-rec.onresult = (e)=>{
-    const texto = e.results[e.results.length-1][0].transcript.toLowerCase();
+rec.onresult = e=>{
+    const t = e.results[e.results.length-1][0].transcript.toLowerCase();
 
-    console.log("Escuchado:", texto);
-
-    if(texto.includes("dash")){
-        const comando = texto.replace("dash","").trim();
-
-        if(comando){
+    if(t.includes("dash")){
+        const cmd = t.replace("dash","").trim();
+        if(cmd){
             msg("Ejecutando...");
-            procesar(comando);
-        }else{
-            msg("Te escucho");
+            procesar(cmd);
         }
     }
 };
 
-rec.onerror = (e)=>{
-    estado.innerText = "Error micrófono";
-};
-
-/* CONTROL MIC */
+/* BOTON */
 function toggleMic(){
     if(!escuchando){
         rec.start();
-        estado.innerText = "Escuchando...";
-        msg("Micrófono activado");
-        escuchando = true;
+        estado.innerText="Escuchando...";
+        escuchando=true;
     }else{
         rec.stop();
-        estado.innerText = "Micrófono apagado";
-        escuchando = false;
+        estado.innerText="Mic apagado";
+        escuchando=false;
     }
 }
 </script>
