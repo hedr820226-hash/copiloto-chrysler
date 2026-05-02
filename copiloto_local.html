@@ -1,167 +1,202 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>ApexDash Copilot</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ApexDash - Copiloto Inteligente</title>
+    <style>
+        :root {
+            --neon-blue: #00d4ff;
+            --neon-green: #39ff14;
+            --neon-magenta: #ff00ff;
+            --bg-dark: #050a0f;
+            --glass: rgba(10, 25, 40, 0.6);
+            --border-glow: 0 0 10px rgba(0, 212, 255, 0.3);
+        }
 
-<style>
-body {
-    background: radial-gradient(circle, #050505, #000);
-    color: #00ffcc;
-    font-family: 'Courier New', monospace;
-    padding: 20px;
-}
+        body {
+            background-color: var(--bg-dark);
+            background-image: radial-gradient(circle at center, #1a2a3a 0%, #050a0f 70%);
+            color: white;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
 
-h1 {
-    text-align: center;
-    letter-spacing: 3px;
-}
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 320px 1fr 320px;
+            grid-template-rows: auto 1fr auto;
+            gap: 15px;
+            width: 100%;
+            max-width: 1600px;
+            height: 100%;
+        }
 
-#panel {
-    border: 2px solid #00ffcc;
-    padding: 20px;
-    box-shadow: 0 0 20px #00ffcc33;
-}
+        .panel {
+            background: var(--glass);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: var(--border-glow);
+            display: flex;
+            flex-direction: column;
+        }
 
-#output {
-    font-size: 1.4em;
-    min-height: 120px;
-    margin-bottom: 20px;
-}
+        .panel-header {
+            font-size: 0.8em;
+            color: #888;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 5px;
+        }
 
-.procesando { color: #ffaa00; }
-.ok { color: #00ffcc; }
-.error { color: red; }
+        h2.main-title {
+            grid-column: span 3;
+            text-align: center;
+            color: var(--neon-blue);
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            text-shadow: 0 0 15px var(--neon-blue);
+            margin: 0 0 10px 0;
+            font-size: 1.4em;
+        }
 
-input {
-    width: 100%;
-    padding: 15px;
-    font-size: 1.2em;
-    background: #000;
-    color: #00ffcc;
-    border: 2px solid #00ffcc;
-    margin-bottom: 15px;
-}
+        /* Columna Izquierda */
+        .left-col { grid-row: span 2; display: flex; flex-direction: column; gap: 15px; }
 
-.botones {
-    display: flex;
-    gap: 10px;
-}
+        .btn-mic {
+            width: 100px; height: 100px; border-radius: 50%;
+            background: radial-gradient(circle, var(--neon-blue), #005f73);
+            border: none; cursor: pointer;
+            box-shadow: 0 0 20px var(--neon-blue);
+            margin: 20px auto;
+        }
 
-button {
-    flex: 1;
-    padding: 15px;
-    background: #00ffcc;
-    border: none;
-    font-weight: bold;
-    cursor: pointer;
-}
+        /* Columna Central */
+        .center-col { display: flex; flex-direction: column; gap: 15px; }
+        
+        .car-view-panel {
+            flex-grow: 1;
+            position: relative;
+            background-color: #000;
+            justify-content: center;
+            align-items: center;
+        }
 
-.status {
-    text-align: center;
-    color: #888;
-    margin-top: 10px;
-}
-</style>
+        #carView {
+            max-width: 95%;
+            max-height: 95%;
+            filter: drop-shadow(0 0 15px rgba(0, 212, 255, 0.7)) 
+                    drop-shadow(0 0 5px rgba(255, 0, 255, 0.5));
+        }
+
+        .chat-panel { height: 250px; }
+        #output {
+            background: rgba(0,0,0,0.3); border-left: 2px solid var(--neon-blue);
+            padding: 10px; margin-bottom: 10px; flex-grow: 1;
+            overflow-y: auto; color: #ccc; font-family: monospace;
+        }
+        .chat-input-container { display: flex; gap: 10px; }
+        input[type="text"] {
+            flex-grow: 1; padding: 10px; background: rgba(0,0,0,0.5);
+            border: 1px solid var(--neon-blue); color: var(--neon-blue);
+            border-radius: 5px; outline: none;
+        }
+        .btn-send {
+            padding: 10px 20px; background: transparent; color: var(--neon-blue);
+            border: 1px solid var(--neon-blue); border-radius: 5px; cursor: pointer;
+        }
+
+        /* Columna Derecha */
+        .right-col { grid-row: span 2; display: flex; flex-direction: column; gap: 15px; }
+        
+        .telemetry-value { color: var(--neon-green); font-weight: bold; font-family: monospace; }
+
+        .dashboard-footer {
+            grid-column: span 3;
+            display: flex; justify-content: space-around;
+            font-size: 0.8em; color: #666; text-transform: uppercase;
+        }
+    </style>
 </head>
-
 <body>
 
-<h1>APEXDASH COPILOT</h1>
+    <div class="dashboard-container">
+        <h2 class="main-title">APEXDASH - COPILOTO INTELIGENTE</h2>
 
-<div id="panel">
-    <div id="output" class="ok">Sistema en línea. Esperando comando...</div>
+        <div class="left-col">
+            <div class="panel">
+                <div class="panel-header">SISTEMA</div>
+                <div style="text-align: center;">
+                    <h3 style="color:var(--neon-blue)">APEXDASH</h3>
+                    <p style="color:var(--neon-green)">TODO BIEN, DASH ESTÁ LISTA</p>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="panel-header">CONTROL DE VOZ</div>
+                <button class="btn-mic" onclick="activarVoz()"></button>
+                <p style="text-align: center;">PULSA PARA HABLAR</p>
+            </div>
+        </div>
 
-    <input id="userInput" placeholder="Escribe un comando..."
-    onkeydown="if(event.key==='Enter') enviar()">
+        <div class="center-col">
+            <div class="panel car-view-panel">
+                <div class="panel-header">VISTA DE NAVE</div>
+                <img src="carro.png" id="carView" alt="Chrysler Concorde">
+            </div>
+            <div class="panel chat-panel">
+                <div class="panel-header">CONSOLA DE MANDO</div>
+                <div id="output">Dash: Sistema en línea. Esperando comandos...</div>
+                <div class="chat-input-container">
+                    <input type="text" id="user-input" placeholder="Dash, escanea motor...">
+                    <button class="btn-send" onclick="enviarComando()">ENVIAR</button>
+                </div>
+            </div>
+        </div>
 
-    <div class="botones">
-        <button onclick="enviar()">ENVIAR</button>
-        <button onclick="repetir()">REPETIR</button>
+        <div class="right-col">
+            <div class="panel">
+                <div class="panel-header">MONITOREO EN TIEMPO REAL</div>
+                <p>RPM: <span class="telemetry-value">--</span></p>
+                <p>Velocidad: <span class="telemetry-value">-- km/h</span></p>
+                <p>Temp: <span class="telemetry-value">-- °C</span></p>
+            </div>
+            <div class="panel">
+                <div class="panel-header">EJEMPLOS</div>
+                <p style="font-size: 0.8em;">"Dash, escanea motor"</p>
+                <p style="font-size: 0.8em;">"Dash, ¿cómo está la batería?"</p>
+            </div>
+        </div>
+
+        <div class="dashboard-footer">
+            <span>🛡 PRIVADO Y SEGURO</span>
+            <span>🔊 100% POR VOZ</span>
+            <span>🚗 DISEÑADO PARA CONDUCIR</span>
+        </div>
     </div>
 
-    <div class="status" id="status">Estado: LISTO</div>
-</div>
-
-<script>
-let ultimoTexto = "";
-
-// 🔊 VOZ LOCAL (rápida y sin internet)
-function hablarLocal(texto) {
-    speechSynthesis.cancel();
-
-    const msg = new SpeechSynthesisUtterance(texto);
-    msg.lang = 'es-MX';
-    msg.rate = 0.95;
-    msg.pitch = 0.85;
-
-    speechSynthesis.speak(msg);
-}
-
-// 🔁 repetir
-function repetir() {
-    if (ultimoTexto) {
-        hablarLocal(ultimoTexto);
-    }
-}
-
-// 🚀 enviar comando
-async function enviar() {
-    const input = document.getElementById('userInput');
-    const output = document.getElementById('output');
-    const status = document.getElementById('status');
-
-    const mensaje = input.value.trim();
-    if (!mensaje) return;
-
-    output.className = "procesando";
-    output.innerText = "Procesando...";
-    status.innerText = "Estado: PROCESANDO";
-
-    input.value = "";
-
-    try {
-        const res = await fetch('/api/asistente', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({code: mensaje})
-        });
-
-        const data = await res.json();
-
-        // detectar acción
-        try {
-            const obj = JSON.parse(data.respuesta);
-
-            if (obj.tipo === "accion") {
-                output.className = "ok";
-                output.innerText = obj.mensaje;
-                status.innerText = "Estado: EJECUTANDO";
-
-                ultimoTexto = obj.mensaje;
-                hablarLocal(obj.mensaje);
-
-                window.open(obj.url, '_blank');
-                return;
-            }
-
-        } catch(e) {}
-
-        // respuesta normal
-        output.className = "ok";
-        output.innerText = data.respuesta;
-        status.innerText = "Estado: LISTO";
-
-        ultimoTexto = data.respuesta;
-        hablarLocal(data.respuesta);
-
-    } catch (error) {
-        output.className = "error";
-        output.innerText = "Error de conexión";
-        status.innerText = "Estado: ERROR";
-    }
-}
-</script>
-
+    <script>
+        function enviarComando() {
+            const inputVal = document.getElementById('user-input').value;
+            const output = document.getElementById('output');
+            output.innerHTML += `<br>Tú: ${inputVal}`;
+            output.innerHTML += `<br><span style="color:var(--neon-blue)">Dash:</span> Procesando...`;
+            document.getElementById('user-input').value = '';
+        }
+        function activarVoz() {
+            const output = document.getElementById('output');
+            output.innerHTML += `<br><span style="color:var(--neon-magenta)">[Sistema]:</span> Escuchando...`;
+        }
+    </script>
 </body>
 </html>
