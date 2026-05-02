@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>ApexDash Copilot</title>
+
+<style>
+body {
+    background: radial-gradient(circle, #050505, #000);
+    color: #00ffcc;
+    font-family: 'Courier New', monospace;
+    padding: 20px;
+}
+
+h1 {
+    text-align: center;
+    letter-spacing: 3px;
+}
+
+#panel {
+    border: 2px solid #00ffcc;
+    padding: 20px;
+    box-shadow: 0 0 20px #00ffcc33;
+}
+
+#output {
+    font-size: 1.4em;
+    min-height: 120px;
+    margin-bottom: 20px;
+}
+
+.procesando { color: #ffaa00; }
+.ok { color: #00ffcc; }
+.error { color: red; }
+
+input {
+    width: 100%;
+    padding: 15px;
+    font-size: 1.2em;
+    background: #000;
+    color: #00ffcc;
+    border: 2px solid #00ffcc;
+    margin-bottom: 15px;
+}
+
+.botones {
+    display: flex;
+    gap: 10px;
+}
+
+button {
+    flex: 1;
+    padding: 15px;
+    background: #00ffcc;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.status {
+    text-align: center;
+    color: #888;
+    margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>APEXDASH COPILOT</h1>
+
+<div id="panel">
+    <div id="output" class="ok">Sistema en línea. Esperando comando...</div>
+
+    <input id="userInput" placeholder="Escribe un comando..."
+    onkeydown="if(event.key==='Enter') enviar()">
+
+    <div class="botones">
+        <button onclick="enviar()">ENVIAR</button>
+        <button onclick="repetir()">REPETIR</button>
+    </div>
+
+    <div class="status" id="status">Estado: LISTO</div>
+</div>
+
+<script>
+let ultimoTexto = "";
+
+// 🔊 VOZ LOCAL (rápida y sin internet)
+function hablarLocal(texto) {
+    speechSynthesis.cancel();
+
+    const msg = new SpeechSynthesisUtterance(texto);
+    msg.lang = 'es-MX';
+    msg.rate = 0.95;
+    msg.pitch = 0.85;
+
+    speechSynthesis.speak(msg);
+}
+
+// 🔁 repetir
+function repetir() {
+    if (ultimoTexto) {
+        hablarLocal(ultimoTexto);
+    }
+}
+
+// 🚀 enviar comando
+async function enviar() {
+    const input = document.getElementById('userInput');
+    const output = document.getElementById('output');
+    const status = document.getElementById('status');
+
+    const mensaje = input.value.trim();
+    if (!mensaje) return;
+
+    output.className = "procesando";
+    output.innerText = "Procesando...";
+    status.innerText = "Estado: PROCESANDO";
+
+    input.value = "";
+
+    try {
+        const res = await fetch('/api/asistente', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({code: mensaje})
+        });
+
+        const data = await res.json();
+
+        // detectar acción
+        try {
+            const obj = JSON.parse(data.respuesta);
+
+            if (obj.tipo === "accion") {
+                output.className = "ok";
+                output.innerText = obj.mensaje;
+                status.innerText = "Estado: EJECUTANDO";
+
+                ultimoTexto = obj.mensaje;
+                hablarLocal(obj.mensaje);
+
+                window.open(obj.url, '_blank');
+                return;
+            }
+
+        } catch(e) {}
+
+        // respuesta normal
+        output.className = "ok";
+        output.innerText = data.respuesta;
+        status.innerText = "Estado: LISTO";
+
+        ultimoTexto = data.respuesta;
+        hablarLocal(data.respuesta);
+
+    } catch (error) {
+        output.className = "error";
+        output.innerText = "Error de conexión";
+        status.innerText = "Estado: ERROR";
+    }
+}
+</script>
+
+</body>
+</html>
