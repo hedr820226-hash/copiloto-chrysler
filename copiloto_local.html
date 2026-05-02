@@ -71,12 +71,10 @@
             font-size: 1.4em;
         }
 
-        /* Estructura */
         .left-col { grid-row: span 2; display: flex; flex-direction: column; gap: 15px; }
         .center-col { display: flex; flex-direction: column; gap: 15px; }
         .right-col { grid-row: span 2; display: flex; flex-direction: column; gap: 15px; }
 
-        /* Panel Auto */
         .car-view-panel {
             flex-grow: 1;
             position: relative;
@@ -94,7 +92,6 @@
             border-radius: 10px;
         }
 
-        /* Chat */
         .chat-panel { height: 250px; }
         #output {
             background: rgba(0,0,0,0.3); border-left: 2px solid var(--neon-blue);
@@ -136,12 +133,12 @@
                 <div class="panel-header">SISTEMA</div>
                 <div style="text-align: center;">
                     <h3 style="color:var(--neon-blue)">APEXDASH</h3>
-                    <p style="color:var(--neon-green)">ESTADO: ACTIVO</p>
+                    <p id="estado-sistema" style="color:var(--neon-green)">ESTADO: ACTIVO</p>
                 </div>
             </div>
             <div class="panel">
                 <div class="panel-header">CONTROL DE VOZ</div>
-                <button class="btn-mic" onclick="activarVoz()"></button>
+                <button class="btn-mic" id="btn-mic" onclick="activarVozManual()"></button>
                 <p style="text-align: center;">PULSA PARA HABLAR</p>
             </div>
         </div>
@@ -156,7 +153,7 @@
                 <div id="output">Dash: Sistema en línea...</div>
                 <div class="chat-input-container">
                     <input type="text" id="user-input" placeholder="Dash, escanea motor...">
-                    <button class="btn-send" onclick="enviarComando()">ENVIAR</button>
+                    <button class="btn-send" onclick="enviarComandoTexto()">ENVIAR</button>
                 </div>
             </div>
         </div>
@@ -176,14 +173,82 @@
     </div>
 
     <script>
-        function enviarComando() {
+        // --- CONFIGURACIÓN DE VOZ Y RECONOCIMIENTO ---
+        const output = document.getElementById('output');
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'es-MX';
+        recognition.continuous = true; // Escucha constante para detectar "Dash"
+        recognition.interimResults = false;
+
+        // 1. EL SISTEMA HABLA (Text-to-Speech)
+        function decir(texto) {
+            window.speechSynthesis.cancel(); // Detiene cualquier audio previo
+            const msg = new SpeechSynthesisUtterance(texto);
+            msg.lang = 'es-MX';
+            msg.rate = 1.0;
+            window.speechSynthesis.speak(msg);
+        }
+
+        // 2. EL SISTEMA ESCUCHA (Speech-to-Text)
+        recognition.onresult = (event) => {
+            const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
+            console.log("Detectado:", transcript);
+
+            if (transcript.includes('dash')) {
+                const comando = transcript.split('dash')[1].trim();
+                if (comando) {
+                    procesarComando(comando);
+                } else {
+                    decir("¿En qué puedo ayudarte?");
+                }
+            }
+        };
+
+        // Reconectar si se detiene
+        recognition.onend = () => { recognition.start(); };
+        recognition.start();
+
+        // 3. PROCESAR COMANDO (Compartido por voz y texto)
+        async function procesarComando(texto) {
+            output.innerHTML += `<br>Tú: ${texto}`;
+            output.scrollTop = output.scrollHeight;
+
+            try {
+                // Ajusta aquí la URL de tu API en Render
+                const response = await fetch('/api/comando', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mensaje: texto })
+                });
+                const data = await response.json();
+                
+                output.innerHTML += `<br>Dash: ${data.respuesta}`;
+                decir(data.respuesta); // El sistema responde por voz
+                output.scrollTop = output.scrollHeight;
+            } catch (e) {
+                decir("Error de conexión con el sistema.");
+            }
+        }
+
+        // 4. FUNCIONES DE INTERFAZ
+        function enviarComandoTexto() {
             const input = document.getElementById('user-input');
-            const output = document.getElementById('output');
-            output.innerHTML += `<br>Tú: ${input.value}`;
-            input.value = '';
+            if(input.value) {
+                procesarComando(input.value);
+                input.value = '';
+            }
         }
-        function activarVoz() {
-            alert("Sistema de voz activo...");
+
+        function activarVozManual() {
+            decir("Escuchando...");
+            // Opcional: podrías poner aquí lógica para forzar escucha temporal
+            alert("Sistema en escucha manual...");
         }
+
+        // Enter key support
+        document.getElementById('user-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') enviarComandoTexto();
+        });
     </script>
 </body>
+</html>
