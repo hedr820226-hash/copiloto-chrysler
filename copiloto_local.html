@@ -144,6 +144,41 @@ const estado = document.getElementById("estado");
 
 let escuchando = false;
 
+/* RECONOCIMIENTO */
+const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+rec.lang = 'es-MX';
+rec.continuous = true;
+rec.interimResults = false;
+
+/* VOZ A TEXTO */
+rec.onresult = e => {
+    const transcript = e.results[e.resultIndex][0].transcript.toLowerCase().trim();
+
+    console.log("Escuchado:", transcript);
+
+    if (transcript.includes("dash")) {
+        const cmd = transcript.replace("dash", "").trim();
+
+        if (cmd) {
+            msg("Entendido: " + cmd);
+            procesar(cmd);
+        } else {
+            msg("Te escucho");
+        }
+    }
+};
+
+/* REINICIO AUTOMÁTICO */
+rec.onend = () => {
+    if (escuchando) rec.start();
+};
+
+/* ERROR */
+rec.onerror = e => {
+    console.log(e);
+    estado.innerText = "Error micrófono";
+};
+
 /* VOZ */
 function hablar(t){
     speechSynthesis.cancel();
@@ -154,21 +189,14 @@ function hablar(t){
 
 /* MENSAJE */
 function msg(t){
-    output.innerHTML += "<br><b>Dash:</b> "+t;
+    output.innerHTML += "<br><b>Dash:</b> " + t;
     hablar(t);
-    output.scrollTop=output.scrollHeight;
-}
-
-/* INICIO */
-window.onload = ()=>{
-    msg("Escaneando vehículo...");
-    setTimeout(()=>msg("Todo en orden."),2000);
-    setTimeout(()=>msg("Dash lista."),3500);
+    output.scrollTop = output.scrollHeight;
 }
 
 /* API */
 async function procesar(t){
-    output.innerHTML += "<br>> "+t;
+    output.innerHTML += "<br>> " + t;
 
     const r = await fetch('/api/asistente',{
         method:'POST',
@@ -192,29 +220,12 @@ async function procesar(t){
 
 /* INPUT */
 function enviar(){
-    const t = document.getElementById("input").value;
-    if(t) procesar(t);
+    const val = document.getElementById("input").value;
+    if(val) procesar(val);
     document.getElementById("input").value="";
 }
 
-/* VOZ */
-const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-rec.lang='es-MX';
-rec.continuous=true;
-
-rec.onresult = e=>{
-    const t = e.results[e.results.length-1][0].transcript.toLowerCase();
-
-    if(t.includes("dash")){
-        const cmd = t.replace("dash","").trim();
-        if(cmd){
-            msg("Ejecutando...");
-            procesar(cmd);
-        }
-    }
-};
-
-/* BOTON */
+/* BOTÓN MIC */
 function toggleMic(){
     if(!escuchando){
         rec.start();
@@ -224,9 +235,17 @@ function toggleMic(){
     }else{
         rec.stop();
         estado.innerText="Mic apagado";
+        msg("Micrófono desactivado");
         escuchando=false;
     }
 }
+
+/* INICIO */
+window.onload = ()=>{
+    msg("Sistema iniciando...");
+    setTimeout(()=>msg("Todo en orden."),2000);
+    setTimeout(()=>msg("Dash lista."),3500);
+};
 </script>
 
 </body>
