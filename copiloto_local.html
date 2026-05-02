@@ -246,6 +246,14 @@ window.onload = ()=>{
     setTimeout(()=>msg("Todo en orden."),2000);
     setTimeout(()=>msg("Dash lista."),3500);
 };
+
+/* ⏱️ HABLA CADA 1 MINUTO */
+setInterval(() => {
+    if(escuchando){
+        procesar("haz una pregunta corta para mantenerme alerta");
+    }
+}, 60000);
+
 </script>
 
 </body>

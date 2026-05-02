@@ -32,19 +32,44 @@ def generar_respuesta(texto):
     if "estado" in t:
         return "Todo en orden. Motor y sistemas estables."
 
-    # 🧠 IA
+    # 🧠 IA (MEJORADA)
     if not client:
         return "Sistema funcionando sin IA."
 
     try:
         chat = client.chat.completions.create(
             messages=[
-                {"role":"system","content":"Eres un copiloto. Responde corto, claro y útil."},
-                {"role":"user","content":texto}
+                {
+                    "role":"system",
+                    "content":"""
+Eres Dash, un copiloto inteligente de conducción.
+
+Tu objetivo es mantener al conductor alerta sin distraerlo.
+
+Reglas:
+- Responde siempre de forma breve (máximo 1 o 2 frases)
+- Usa un tono natural y tranquilo, como copiloto profesional
+- No des explicaciones largas
+
+Comportamiento:
+- Puedes hacer preguntas ocasionales como:
+  "¿Todo bien?" o "¿Cómo te sientes?"
+- Si el usuario parece cansado, sugiere descansar
+- Puedes decir datos curiosos o frases cortas para mantener atención
+- Prioriza siempre la seguridad
+
+Nunca satures al conductor ni hables demasiado.
+"""
+                },
+                {
+                    "role":"user",
+                    "content":texto
+                }
             ],
             model="llama-3.1-8b-instant",
             max_tokens=80
         )
+
         return chat.choices[0].message.content
 
     except Exception as e:
