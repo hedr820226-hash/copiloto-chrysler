@@ -1,95 +1,218 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>ApexDash - Copiloto Inteligente</title>
-    <style>
-        :root { --cyan: #00d4ff; --dark-bg: #050a0f; --panel-bg: rgba(10, 25, 40, 0.7); }
-        body { background-color: var(--dark-bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; display: grid; grid-template-columns: 320px 1fr 320px; gap: 20px; height: 100vh; box-sizing: border-box; }
-        
-        .header { grid-column: span 3; text-align: center; color: var(--cyan); font-size: 2em; letter-spacing: 5px; text-shadow: 0 0 10px var(--cyan); }
-        .panel { background: var(--panel-bg); border: 1px solid var(--cyan); border-radius: 15px; padding: 20px; box-shadow: inset 0 0 10px rgba(0, 212, 255, 0.2); }
-        
-        /* Consola de Mando */
-        #output { height: 300px; overflow-y: auto; border: 1px solid #333; padding: 15px; margin-bottom: 10px; font-family: monospace; color: var(--cyan); background: rgba(0,0,0,0.5); }
-        input { width: 70%; padding: 12px; background: #000; border: 1px solid var(--cyan); color: white; border-radius: 5px; }
-        .btn { padding: 10px 20px; background: transparent; border: 1px solid var(--cyan); color: var(--cyan); cursor: pointer; transition: 0.3s; }
-        .btn:hover { background: var(--cyan); color: black; }
-        
-        /* Botón Micrófono */
-        .mic-container { text-align: center; padding: 40px; }
-        .btn-mic { width: 150px; height: 150px; border-radius: 50%; background: radial-gradient(circle, var(--cyan), #005f73); border: none; cursor: pointer; box-shadow: 0 0 40px var(--cyan); }
-    </style>
+<meta charset="UTF-8">
+<title>DASH - Copiloto</title>
+
+<style>
+:root{
+    --cyan:#00d4ff;
+    --bg:#02060a;
+}
+
+body{
+    margin:0;
+    font-family:'Segoe UI';
+    background:var(--bg);
+    color:white;
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+}
+
+/* HEADER */
+.header{
+    text-align:center;
+    font-size:1.8em;
+    color:var(--cyan);
+    padding:10px;
+    text-shadow:0 0 10px var(--cyan);
+}
+
+/* CONTENEDOR */
+.main{
+    display:flex;
+    flex:1;
+}
+
+/* LADOS */
+.panel{
+    flex:1;
+    margin:5px;
+    padding:15px;
+    border:1px solid var(--cyan);
+    border-radius:10px;
+    background:rgba(0,20,40,0.6);
+}
+
+/* CONSOLA */
+#output{
+    height:60%;
+    overflow:auto;
+    font-size:1.2em;
+    color:var(--cyan);
+}
+
+/* INPUT */
+.input-area{
+    margin-top:10px;
+}
+
+input{
+    width:70%;
+    padding:10px;
+    background:black;
+    border:1px solid var(--cyan);
+    color:white;
+}
+
+button{
+    padding:10px;
+    border:none;
+    background:var(--cyan);
+    color:black;
+    cursor:pointer;
+}
+
+/* MIC */
+.mic{
+    position:fixed;
+    bottom:20px;
+    left:50%;
+    transform:translateX(-50%);
+}
+
+.btn-mic{
+    width:100px;
+    height:100px;
+    border-radius:50%;
+    background:var(--cyan);
+    box-shadow:0 0 30px var(--cyan);
+}
+</style>
 </head>
+
 <body>
-    <h1 class="header">APEXDASH COPILOT</h1>
 
+<div class="header">DASH - COPILOTO INTELIGENTE</div>
+
+<div class="main">
+
+    <!-- PANEL IZQUIERDO -->
     <div class="panel">
-        <div style="color: #888;">CONTROL DE VOZ</div>
-        <div class="mic-container">
-            <button class="btn-mic" id="btn-mic"></button>
-            <p>PULSA O HABLA "DASH"</p>
+        <h3>CONTROL DE VOZ</h3>
+        <p>Di: <b>"Dash"</b> + comando</p>
+        <p>Ejemplo: "Dash abre YouTube"</p>
+    </div>
+
+    <!-- PANEL CENTRAL -->
+    <div class="panel">
+        <h3>DASH</h3>
+
+        <div id="output">Inicializando sistema...</div>
+
+        <div class="input-area">
+            <input id="input" placeholder="Escribe comando...">
+            <button onclick="enviarTexto()">ENVIAR</button>
         </div>
     </div>
 
+    <!-- PANEL DERECHO -->
     <div class="panel">
-        <div style="color: #888;">CONSOLA DE MANDO</div>
-        <div id="output">Dash: Sistema en línea...</div>
-        <div>
-            <input type="text" id="user-input" placeholder="Escribe comando...">
-            <button class="btn" onclick="enviarTexto()">ENVIAR</button>
-        </div>
-    </div>
-
-    <div class="panel">
-        <div style="color: #888;">MONITOREO EN TIEMPO REAL</div>
-        <p>RPM: 850 RPM</p>
-        <p>Velocidad: 0 km/h</p>
+        <h3>MONITOREO</h3>
+        <p>Motor: Óptimo</p>
         <p>Temp: 90°C</p>
+        <p>Voltaje: 14V</p>
     </div>
 
-    <script>
-        const output = document.getElementById('output');
-        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-        recognition.lang = 'es-MX';
-        recognition.continuous = true;
+</div>
 
-        function decir(texto) {
-            window.speechSynthesis.cancel();
-            const msg = new SpeechSynthesisUtterance(texto);
-            msg.lang = 'es-MX';
-            window.speechSynthesis.speak(msg);
-        }
+<!-- MIC -->
+<div class="mic">
+    <button class="btn-mic" onclick="activarMicrofono()"></button>
+</div>
 
-        async function procesar(texto) {
-            output.innerHTML += `<br>> ${texto}`;
-            try {
-                const response = await fetch('/api/asistente', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({code: texto})
-                });
-                const data = await response.json();
-                output.innerHTML += `<br>Dash: ${data.respuesta}`;
-                decir(data.respuesta);
-                output.scrollTop = output.scrollHeight;
-            } catch(e) { decir("Error de conexión"); }
-        }
+<script>
+const output = document.getElementById("output");
 
-        recognition.onresult = (e) => {
-            const transcript = e.results[e.results.length-1][0].transcript.toLowerCase();
-            if(transcript.includes('dash')) {
-                procesar(transcript.split('dash')[1].trim());
+/* VOZ */
+function hablar(t){
+    speechSynthesis.cancel();
+    const m = new SpeechSynthesisUtterance(t);
+    m.lang='es-MX';
+    speechSynthesis.speak(m);
+}
+
+/* MENSAJE */
+function msg(t){
+    output.innerHTML += "<br>Dash: "+t;
+    hablar(t);
+    output.scrollTop=output.scrollHeight;
+}
+
+/* INICIO */
+window.onload = ()=>{
+    msg("Escaneando sistema...");
+    setTimeout(()=>msg("Todo en orden."),2000);
+    setTimeout(()=>msg("Dash lista. Monitoreando."),3500);
+}
+
+/* API */
+async function procesar(t){
+    output.innerHTML += "<br>> "+t;
+
+    try{
+        const r = await fetch('/api/asistente',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({code:t})
+        });
+
+        const d = await r.json();
+
+        try{
+            const obj = JSON.parse(d.respuesta);
+            if(obj.tipo==="accion"){
+                window.open(obj.url);
+                msg(obj.mensaje);
+                return;
             }
-        };
+        }catch{}
 
-        recognition.start();
+        msg(d.respuesta);
 
-        function enviarTexto() {
-            const val = document.getElementById('user-input').value;
-            if(val) procesar(val);
-            document.getElementById('user-input').value = '';
-        }
-    </script>
+    }catch{
+        msg("Error de conexión");
+    }
+}
+
+/* INPUT */
+function enviarTexto(){
+    const t = document.getElementById("input").value;
+    if(t) procesar(t);
+    document.getElementById("input").value="";
+}
+
+/* VOZ */
+const rec = new (window.SpeechRecognition||window.webkitSpeechRecognition)();
+rec.lang='es-MX';
+rec.continuous=true;
+
+rec.onresult = e=>{
+    const t = e.results[e.results.length-1][0].transcript.toLowerCase();
+
+    if(t.includes("dash")){
+        const cmd = t.replace("dash","").trim();
+        if(cmd) procesar(cmd);
+    }
+}
+
+/* BOTON */
+function activarMicrofono(){
+    rec.start();
+    msg("Escuchando...");
+}
+</script>
+
 </body>
 </html>
