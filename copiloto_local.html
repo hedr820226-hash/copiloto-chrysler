@@ -71,35 +71,30 @@
             font-size: 1.4em;
         }
 
-        /* Columna Izquierda */
+        /* Estructura */
         .left-col { grid-row: span 2; display: flex; flex-direction: column; gap: 15px; }
-
-        .btn-mic {
-            width: 100px; height: 100px; border-radius: 50%;
-            background: radial-gradient(circle, var(--neon-blue), #005f73);
-            border: none; cursor: pointer;
-            box-shadow: 0 0 20px var(--neon-blue);
-            margin: 20px auto;
-        }
-
-        /* Columna Central */
         .center-col { display: flex; flex-direction: column; gap: 15px; }
-        
+        .right-col { grid-row: span 2; display: flex; flex-direction: column; gap: 15px; }
+
+        /* Panel Auto */
         .car-view-panel {
             flex-grow: 1;
             position: relative;
             background-color: #000;
             justify-content: center;
             align-items: center;
+            display: flex;
         }
 
         #carView {
-            max-width: 95%;
-            max-height: 95%;
+            max-width: 90%;
+            max-height: 90%;
             filter: drop-shadow(0 0 15px rgba(0, 212, 255, 0.7)) 
                     drop-shadow(0 0 5px rgba(255, 0, 255, 0.5));
+            border-radius: 10px;
         }
 
+        /* Chat */
         .chat-panel { height: 250px; }
         #output {
             background: rgba(0,0,0,0.3); border-left: 2px solid var(--neon-blue);
@@ -116,12 +111,14 @@
             padding: 10px 20px; background: transparent; color: var(--neon-blue);
             border: 1px solid var(--neon-blue); border-radius: 5px; cursor: pointer;
         }
-
-        /* Columna Derecha */
-        .right-col { grid-row: span 2; display: flex; flex-direction: column; gap: 15px; }
+        .btn-mic {
+            width: 100px; height: 100px; border-radius: 50%;
+            background: radial-gradient(circle, var(--neon-blue), #005f73);
+            border: none; cursor: pointer;
+            box-shadow: 0 0 20px var(--neon-blue);
+            margin: 20px auto;
+        }
         
-        .telemetry-value { color: var(--neon-green); font-weight: bold; font-family: monospace; }
-
         .dashboard-footer {
             grid-column: span 3;
             display: flex; justify-content: space-around;
@@ -139,7 +136,7 @@
                 <div class="panel-header">SISTEMA</div>
                 <div style="text-align: center;">
                     <h3 style="color:var(--neon-blue)">APEXDASH</h3>
-                    <p style="color:var(--neon-green)">TODO BIEN, DASH ESTÁ LISTA</p>
+                    <p style="color:var(--neon-green)">ESTADO: ACTIVO</p>
                 </div>
             </div>
             <div class="panel">
@@ -152,11 +149,11 @@
         <div class="center-col">
             <div class="panel car-view-panel">
                 <div class="panel-header">VISTA DE NAVE</div>
-                <img src="carro.png" id="carView" alt="Chrysler Concorde">
+                <img src="{{ url_for('static', filename='carro.png') }}" id="carView" alt="Chrysler Concorde">
             </div>
             <div class="panel chat-panel">
                 <div class="panel-header">CONSOLA DE MANDO</div>
-                <div id="output">Dash: Sistema en línea. Esperando comandos...</div>
+                <div id="output">Dash: Sistema en línea...</div>
                 <div class="chat-input-container">
                     <input type="text" id="user-input" placeholder="Dash, escanea motor...">
                     <button class="btn-send" onclick="enviarComando()">ENVIAR</button>
@@ -166,37 +163,27 @@
 
         <div class="right-col">
             <div class="panel">
-                <div class="panel-header">MONITOREO EN TIEMPO REAL</div>
-                <p>RPM: <span class="telemetry-value">--</span></p>
-                <p>Velocidad: <span class="telemetry-value">-- km/h</span></p>
-                <p>Temp: <span class="telemetry-value">-- °C</span></p>
-            </div>
-            <div class="panel">
-                <div class="panel-header">EJEMPLOS</div>
-                <p style="font-size: 0.8em;">"Dash, escanea motor"</p>
-                <p style="font-size: 0.8em;">"Dash, ¿cómo está la batería?"</p>
+                <div class="panel-header">MONITOREO</div>
+                <p>RPM: --</p>
+                <p>Velocidad: --</p>
+                <p>Temp: --</p>
             </div>
         </div>
 
         <div class="dashboard-footer">
-            <span>🛡 PRIVADO Y SEGURO</span>
-            <span>🔊 100% POR VOZ</span>
-            <span>🚗 DISEÑADO PARA CONDUCIR</span>
+            <span>🛡 PRIVADO</span> <span>🔊 VOZ ACTIVA</span> <span>🚗 LISTO PARA CONDUCIR</span>
         </div>
     </div>
 
     <script>
         function enviarComando() {
-            const inputVal = document.getElementById('user-input').value;
+            const input = document.getElementById('user-input');
             const output = document.getElementById('output');
-            output.innerHTML += `<br>Tú: ${inputVal}`;
-            output.innerHTML += `<br><span style="color:var(--neon-blue)">Dash:</span> Procesando...`;
-            document.getElementById('user-input').value = '';
+            output.innerHTML += `<br>Tú: ${input.value}`;
+            input.value = '';
         }
         function activarVoz() {
-            const output = document.getElementById('output');
-            output.innerHTML += `<br><span style="color:var(--neon-magenta)">[Sistema]:</span> Escuchando...`;
+            alert("Sistema de voz activo...");
         }
     </script>
 </body>
-</html>
