@@ -13,30 +13,20 @@ def generar_respuesta(texto):
     if not client:
         return "Error: API Key no configurada."
     
-    t = texto.lower()
-
-    # Comandos rápidos
-    if "youtube" in t:
-        return {"tipo": "accion", "mensaje": "Abriendo YouTube", "url": "https://youtube.com"}
-    if "hora" in t:
-        return f"Son las {datetime.now().strftime('%H:%M')}. Mantente enfocado."
-    if "gracias" in t:
-        return "Siempre a tu servicio."
-
     # IA (Groq)
     try:
         chat = client.chat.completions.create(
             messages=[
-                {"role": "system", "content": "Eres un copiloto inteligente. Sé breve, claro y natural."},
+                {"role": "system", "content": "Eres un copiloto inteligente. Sé breve, claro y natural. Responde como un copiloto de alto rendimiento."},
                 {"role": "user", "content": texto}
             ],
             model="llama-3.1-8b-instant",
-            max_tokens=120
+            max_tokens=150
         )
         return chat.choices[0].message.content
     except Exception as e:
         print(f"Error IA: {e}")
-        return "Error procesando la solicitud."
+        return "Error de sistema."
 
 @app.route('/api/asistente', methods=['POST'])
 def asistente():

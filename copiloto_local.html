@@ -2,47 +2,54 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ApexDash - Copiloto Inteligente</title>
     <style>
-        :root {
-            --neon-blue: #00d4ff;
-            --neon-green: #39ff14;
-            --bg-dark: #050a0f;
-            --glass: rgba(10, 25, 40, 0.6);
-            --border-glow: 0 0 10px rgba(0, 212, 255, 0.3);
-        }
-        body { background-color: var(--bg-dark); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; height: 100vh; display: flex; justify-content: center; align-items: center; }
-        .dashboard-container { display: grid; grid-template-columns: 320px 1fr 320px; gap: 15px; width: 100%; max-width: 1600px; height: 90vh; }
-        .panel { background: var(--glass); border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 12px; padding: 20px; box-shadow: var(--border-glow); }
-        .panel-header { font-size: 0.8em; color: #888; text-transform: uppercase; margin-bottom: 15px; }
-        #output { background: rgba(0,0,0,0.3); border-left: 2px solid var(--neon-blue); padding: 10px; height: 200px; overflow-y: auto; color: #ccc; font-family: monospace; margin-bottom: 10px; }
-        .btn-mic { width: 100px; height: 100px; border-radius: 50%; background: radial-gradient(circle, var(--neon-blue), #005f73); border: none; cursor: pointer; box-shadow: 0 0 20px var(--neon-blue); margin: 20px auto; display: block; }
-        input[type="text"] { width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid var(--neon-blue); color: var(--neon-blue); border-radius: 5px; }
+        :root { --cyan: #00d4ff; --dark-bg: #050a0f; --panel-bg: rgba(10, 25, 40, 0.7); }
+        body { background-color: var(--dark-bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; display: grid; grid-template-columns: 320px 1fr 320px; gap: 20px; height: 100vh; box-sizing: border-box; }
+        
+        .header { grid-column: span 3; text-align: center; color: var(--cyan); font-size: 2em; letter-spacing: 5px; text-shadow: 0 0 10px var(--cyan); }
+        .panel { background: var(--panel-bg); border: 1px solid var(--cyan); border-radius: 15px; padding: 20px; box-shadow: inset 0 0 10px rgba(0, 212, 255, 0.2); }
+        
+        /* Consola de Mando */
+        #output { height: 300px; overflow-y: auto; border: 1px solid #333; padding: 15px; margin-bottom: 10px; font-family: monospace; color: var(--cyan); background: rgba(0,0,0,0.5); }
+        input { width: 70%; padding: 12px; background: #000; border: 1px solid var(--cyan); color: white; border-radius: 5px; }
+        .btn { padding: 10px 20px; background: transparent; border: 1px solid var(--cyan); color: var(--cyan); cursor: pointer; transition: 0.3s; }
+        .btn:hover { background: var(--cyan); color: black; }
+        
+        /* Botón Micrófono */
+        .mic-container { text-align: center; padding: 40px; }
+        .btn-mic { width: 150px; height: 150px; border-radius: 50%; background: radial-gradient(circle, var(--cyan), #005f73); border: none; cursor: pointer; box-shadow: 0 0 40px var(--cyan); }
     </style>
 </head>
 <body>
-    <div class="dashboard-container">
-        <div class="panel">
-            <div class="panel-header">CONTROL DE VOZ</div>
+    <h1 class="header">APEXDASH COPILOT</h1>
+
+    <div class="panel">
+        <div style="color: #888;">CONTROL DE VOZ</div>
+        <div class="mic-container">
             <button class="btn-mic" id="btn-mic"></button>
-            <p style="text-align: center;">PULSA O HABLA</p>
+            <p>PULSA O HABLA "DASH"</p>
         </div>
-        <div class="panel">
-            <div class="panel-header">CONSOLA DE MANDO</div>
-            <div id="output">Dash: Sistema en línea...</div>
+    </div>
+
+    <div class="panel">
+        <div style="color: #888;">CONSOLA DE MANDO</div>
+        <div id="output">Dash: Sistema en línea...</div>
+        <div>
             <input type="text" id="user-input" placeholder="Escribe comando...">
+            <button class="btn" onclick="enviarTexto()">ENVIAR</button>
         </div>
-        <div class="panel">
-            <div class="panel-header">MONITOREO</div>
-            <p>Sistema: ApexDash v1.0</p>
-        </div>
+    </div>
+
+    <div class="panel">
+        <div style="color: #888;">MONITOREO EN TIEMPO REAL</div>
+        <p>RPM: 850 RPM</p>
+        <p>Velocidad: 0 km/h</p>
+        <p>Temp: 90°C</p>
     </div>
 
     <script>
         const output = document.getElementById('output');
-        const btnMic = document.getElementById('btn-mic');
-        
         const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
         recognition.lang = 'es-MX';
         recognition.continuous = true;
@@ -54,37 +61,35 @@
             window.speechSynthesis.speak(msg);
         }
 
-        recognition.onstart = () => { btnMic.style.boxShadow = "0 0 40px var(--neon-green)"; };
-        recognition.onend = () => { btnMic.style.boxShadow = "0 0 20px var(--neon-blue)"; recognition.start(); };
-
-        recognition.onresult = (event) => {
-            const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
-            if (transcript.includes('dash')) {
-                const comando = transcript.split('dash')[1].trim();
-                if (comando) procesarComando(comando);
-            }
-        };
-
-        async function procesarComando(texto) {
+        async function procesar(texto) {
             output.innerHTML += `<br>> ${texto}`;
             try {
                 const response = await fetch('/api/asistente', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ code: texto })
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({code: texto})
                 });
                 const data = await response.json();
                 output.innerHTML += `<br>Dash: ${data.respuesta}`;
                 decir(data.respuesta);
-            } catch (e) {
-                decir("Error de conexión.");
-            }
+                output.scrollTop = output.scrollHeight;
+            } catch(e) { decir("Error de conexión"); }
         }
 
+        recognition.onresult = (e) => {
+            const transcript = e.results[e.results.length-1][0].transcript.toLowerCase();
+            if(transcript.includes('dash')) {
+                procesar(transcript.split('dash')[1].trim());
+            }
+        };
+
         recognition.start();
-        document.getElementById('user-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') procesarComando(e.target.value);
-        });
+
+        function enviarTexto() {
+            const val = document.getElementById('user-input').value;
+            if(val) procesar(val);
+            document.getElementById('user-input').value = '';
+        }
     </script>
 </body>
 </html>
