@@ -2,11 +2,11 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>DASH - Copiloto</title>
+<title>DASH Copiloto</title>
 
 <style>
 :root{
-    --cyan:#00d4ff;
+    --cyan:#00eaff;
     --bg:#02060a;
 }
 
@@ -15,42 +15,39 @@ body{
     font-family:'Segoe UI';
     background:var(--bg);
     color:white;
-    display:flex;
-    flex-direction:column;
-    height:100vh;
 }
 
 /* HEADER */
 .header{
     text-align:center;
-    font-size:1.8em;
+    font-size:2em;
     color:var(--cyan);
     padding:10px;
-    text-shadow:0 0 10px var(--cyan);
+    text-shadow:0 0 15px var(--cyan);
 }
 
-/* CONTENEDOR */
+/* LAYOUT */
 .main{
     display:flex;
-    flex:1;
+    height:80vh;
 }
 
-/* LADOS */
+/* PANEL */
 .panel{
     flex:1;
-    margin:5px;
+    margin:10px;
     padding:15px;
     border:1px solid var(--cyan);
-    border-radius:10px;
-    background:rgba(0,20,40,0.6);
+    border-radius:15px;
+    background:rgba(0,30,60,0.6);
 }
 
 /* CONSOLA */
 #output{
     height:60%;
     overflow:auto;
-    font-size:1.2em;
     color:var(--cyan);
+    font-size:1.2em;
 }
 
 /* INPUT */
@@ -68,9 +65,8 @@ input{
 
 button{
     padding:10px;
-    border:none;
     background:var(--cyan);
-    color:black;
+    border:none;
     cursor:pointer;
 }
 
@@ -83,63 +79,73 @@ button{
 }
 
 .btn-mic{
-    width:100px;
-    height:100px;
+    width:110px;
+    height:110px;
     border-radius:50%;
     background:var(--cyan);
-    box-shadow:0 0 30px var(--cyan);
+    box-shadow:0 0 40px var(--cyan);
+    border:none;
+}
+
+/* ESTADO */
+.estado{
+    text-align:center;
+    color:#aaa;
 }
 </style>
 </head>
 
 <body>
 
-<div class="header">DASH - COPILOTO INTELIGENTE</div>
+<div class="header">DASH - COPILOTO</div>
 
 <div class="main">
 
-    <!-- PANEL IZQUIERDO -->
-    <div class="panel">
-        <h3>CONTROL DE VOZ</h3>
-        <p>Di: <b>"Dash"</b> + comando</p>
-        <p>Ejemplo: "Dash abre YouTube"</p>
-    </div>
+<div class="panel">
+<h3>CONTROL</h3>
+<p>Di: <b>"Dash"</b> + comando</p>
+<p>Ejemplo: Dash abre YouTube</p>
+</div>
 
-    <!-- PANEL CENTRAL -->
-    <div class="panel">
-        <h3>DASH</h3>
+<div class="panel">
+<h3>DASH</h3>
 
-        <div id="output">Inicializando sistema...</div>
+<div id="output">Sistema iniciando...</div>
 
-        <div class="input-area">
-            <input id="input" placeholder="Escribe comando...">
-            <button onclick="enviarTexto()">ENVIAR</button>
-        </div>
-    </div>
+<div class="input-area">
+<input id="input" placeholder="Escribe comando...">
+<button onclick="enviarTexto()">ENVIAR</button>
+</div>
 
-    <!-- PANEL DERECHO -->
-    <div class="panel">
-        <h3>MONITOREO</h3>
-        <p>Motor: Óptimo</p>
-        <p>Temp: 90°C</p>
-        <p>Voltaje: 14V</p>
-    </div>
+<div class="estado" id="estado">Micrófono apagado</div>
+</div>
+
+<div class="panel">
+<h3>ESTADO VEHÍCULO</h3>
+<p>Motor: Óptimo</p>
+<p>Temp: 90°C</p>
+<p>Voltaje: 14V</p>
+</div>
 
 </div>
 
-<!-- MIC -->
 <div class="mic">
-    <button class="btn-mic" onclick="activarMicrofono()"></button>
+<button class="btn-mic" onclick="toggleMic()"></button>
 </div>
 
 <script>
 const output = document.getElementById("output");
+const estado = document.getElementById("estado");
+
+let escuchando = false;
 
 /* VOZ */
-function hablar(t){
+function hablar(texto){
     speechSynthesis.cancel();
-    const m = new SpeechSynthesisUtterance(t);
+    const m = new SpeechSynthesisUtterance(texto);
     m.lang='es-MX';
+    m.rate=0.95;
+    m.pitch=0.9;
     speechSynthesis.speak(m);
 }
 
@@ -152,9 +158,9 @@ function msg(t){
 
 /* INICIO */
 window.onload = ()=>{
-    msg("Escaneando sistema...");
+    msg("Escaneando vehículo...");
     setTimeout(()=>msg("Todo en orden."),2000);
-    setTimeout(()=>msg("Dash lista. Monitoreando."),3500);
+    setTimeout(()=>msg("Dash lista. Di 'Dash' para activar."),3500);
 }
 
 /* API */
@@ -193,24 +199,45 @@ function enviarTexto(){
     document.getElementById("input").value="";
 }
 
-/* VOZ */
-const rec = new (window.SpeechRecognition||window.webkitSpeechRecognition)();
+/* VOZ REAL */
+const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
 rec.lang='es-MX';
 rec.continuous=true;
+rec.interimResults=false;
 
-rec.onresult = e=>{
-    const t = e.results[e.results.length-1][0].transcript.toLowerCase();
+rec.onresult = (e)=>{
+    const texto = e.results[e.results.length-1][0].transcript.toLowerCase();
 
-    if(t.includes("dash")){
-        const cmd = t.replace("dash","").trim();
-        if(cmd) procesar(cmd);
+    console.log("Escuchado:", texto);
+
+    if(texto.includes("dash")){
+        const comando = texto.replace("dash","").trim();
+
+        if(comando){
+            msg("Ejecutando...");
+            procesar(comando);
+        }else{
+            msg("Te escucho");
+        }
     }
-}
+};
 
-/* BOTON */
-function activarMicrofono(){
-    rec.start();
-    msg("Escuchando...");
+rec.onerror = (e)=>{
+    estado.innerText = "Error micrófono";
+};
+
+/* CONTROL MIC */
+function toggleMic(){
+    if(!escuchando){
+        rec.start();
+        estado.innerText = "Escuchando...";
+        msg("Micrófono activado");
+        escuchando = true;
+    }else{
+        rec.stop();
+        estado.innerText = "Micrófono apagado";
+        escuchando = false;
+    }
 }
 </script>
 
