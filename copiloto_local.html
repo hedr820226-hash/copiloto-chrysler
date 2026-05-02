@@ -20,17 +20,9 @@ body{
 /* GRID */
 .container{
     display:grid;
-    grid-template-columns: 300px 1fr 300px;
+    grid-template-columns: 280px 1fr 280px;
     gap:10px;
     padding:10px;
-}
-
-/* PANEL */
-.panel{
-    border:1px solid var(--cyan);
-    border-radius:15px;
-    padding:15px;
-    background:rgba(0,30,60,0.5);
 }
 
 /* HEADER */
@@ -42,22 +34,34 @@ body{
     text-shadow:0 0 15px var(--cyan);
 }
 
-/* CARRO */
-.car{
+/* PANEL */
+.panel{
+    border:1px solid var(--cyan);
+    border-radius:15px;
+    padding:15px;
+    background:rgba(0,30,60,0.5);
+}
+
+/* IMÁGENES */
+.logo{
+    width:100%;
+    margin-bottom:10px;
+}
+.carro{
     width:100%;
     border-radius:10px;
 }
 
 /* CHAT */
 #output{
-    height:250px;
+    height:220px;
     overflow:auto;
     color:var(--cyan);
 }
 
 /* INPUT */
 input{
-    width:70%;
+    width:65%;
     padding:10px;
     background:black;
     border:1px solid var(--cyan);
@@ -68,6 +72,7 @@ button{
     padding:10px;
     background:var(--cyan);
     border:none;
+    cursor:pointer;
 }
 
 /* MIC */
@@ -75,13 +80,18 @@ button{
     text-align:center;
     margin-top:10px;
 }
-
 .btn-mic{
     width:90px;
     height:90px;
     border-radius:50%;
     background:var(--cyan);
     box-shadow:0 0 30px var(--cyan);
+}
+
+/* ESTADO */
+.estado{
+    text-align:center;
+    color:#aaa;
 }
 </style>
 </head>
@@ -94,8 +104,7 @@ button{
 
 <!-- IZQUIERDA -->
 <div class="panel">
-<img src="logo_apexdash.svg" width="100">
-<h3>DASH</h3>
+<img src="/static/logo.png" class="logo">
 
 <p>Di: "Dash"</p>
 <p>Ej: Dash abre YouTube</p>
@@ -109,9 +118,9 @@ button{
 <!-- CENTRO -->
 <div class="panel">
 
-<img src="carro.png" class="car">
+<img src="/static/carro.png" class="carro">
 
-<div id="output">Iniciando sistema...</div>
+<div id="output">Sistema iniciando...</div>
 
 <input id="input" placeholder="Escribe comando...">
 <button onclick="enviar()">ENVIAR</button>
@@ -120,10 +129,11 @@ button{
 
 <!-- DERECHA -->
 <div class="panel">
-<h3>ESTADO</h3>
-<p>Motor: Óptimo</p>
-<p>Temp: 90°C</p>
-<p>Voltaje: 14V</p>
+<h3>COMANDOS</h3>
+<p>Dash abre YouTube</p>
+<p>Dash abre Gmail</p>
+<p>Dash abre Maps</p>
+<p>Dash abre WhatsApp</p>
 </div>
 
 </div>
@@ -144,15 +154,16 @@ function hablar(t){
 
 /* MENSAJE */
 function msg(t){
-    output.innerHTML += "<br>Dash: "+t;
+    output.innerHTML += "<br><b>Dash:</b> "+t;
     hablar(t);
+    output.scrollTop=output.scrollHeight;
 }
 
 /* INICIO */
 window.onload = ()=>{
     msg("Escaneando vehículo...");
     setTimeout(()=>msg("Todo en orden."),2000);
-    setTimeout(()=>msg("Dash lista."),3000);
+    setTimeout(()=>msg("Dash lista."),3500);
 }
 
 /* API */
@@ -208,6 +219,7 @@ function toggleMic(){
     if(!escuchando){
         rec.start();
         estado.innerText="Escuchando...";
+        msg("Micrófono activado");
         escuchando=true;
     }else{
         rec.stop();

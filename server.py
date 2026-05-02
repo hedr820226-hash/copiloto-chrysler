@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, send_file
+import os
 from datetime import datetime
 from groq import Groq
-import os
 
 app = Flask(__name__)
 
@@ -12,64 +12,57 @@ client = Groq(api_key=api_key) if api_key else None
 def generar_respuesta(texto):
     t = texto.lower()
 
-    # 🚗 COMANDOS DIRECTOS (rápidos)
+    # 🔥 COMANDOS DIRECTOS
     if "youtube" in t:
-        return {
-            "tipo": "accion",
-            "mensaje": "Abriendo YouTube",
-            "url": "https://youtube.com"
-        }
+        return {"tipo":"accion","mensaje":"Abriendo YouTube","url":"https://youtube.com"}
+
+    if "gmail" in t or "correo" in t:
+        return {"tipo":"accion","mensaje":"Abriendo Gmail","url":"https://mail.google.com"}
+
+    if "mapa" in t or "maps" in t:
+        return {"tipo":"accion","mensaje":"Abriendo Google Maps","url":"https://maps.google.com"}
+
+    if "whatsapp" in t:
+        return {"tipo":"accion","mensaje":"Abriendo WhatsApp","url":"https://wa.me/"}
 
     if "hora" in t:
         hora = datetime.now().strftime("%H:%M")
         return f"Son las {hora}"
 
-    if "estado" in t or "vehiculo" in t:
-        return "Todo en orden. Sistema estable. Sin alertas."
+    if "estado" in t:
+        return "Todo en orden. Motor y sistemas estables."
 
-    # 🧠 IA (modo copiloto)
+    # 🧠 IA
     if not client:
-        return "Sistema sin conexión a IA."
+        return "Sistema funcionando sin IA."
 
     try:
         chat = client.chat.completions.create(
             messages=[
-                {
-                    "role": "system",
-                    "content": "Eres un copiloto de conducción. Respondes corto, claro y útil. No das respuestas largas. Prioriza seguridad y acción inmediata."
-                },
-                {
-                    "role": "user",
-                    "content": texto
-                }
+                {"role":"system","content":"Eres un copiloto. Responde corto, claro y útil."},
+                {"role":"user","content":texto}
             ],
             model="llama-3.1-8b-instant",
             max_tokens=80
         )
-
         return chat.choices[0].message.content
 
     except Exception as e:
         print("Error IA:", e)
-        return "Error de sistema."
+        return "Error de sistema"
 
 
 @app.route('/api/asistente', methods=['POST'])
 def asistente():
     data = request.json
-    texto = data.get("code", "")
+    texto = data.get("code","")
 
     respuesta = generar_respuesta(texto)
 
-    # 🔁 Si es acción (IMPORTANTE para tu HTML)
     if isinstance(respuesta, dict):
-        return jsonify({
-            "respuesta": str(respuesta).replace("'", '"')
-        })
+        return jsonify({"respuesta": str(respuesta).replace("'",'"')})
 
-    return jsonify({
-        "respuesta": respuesta
-    })
+    return jsonify({"respuesta": respuesta})
 
 
 @app.route('/')
@@ -78,5 +71,5 @@ def home():
 
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT",5000))
     app.run(host='0.0.0.0', port=port)
