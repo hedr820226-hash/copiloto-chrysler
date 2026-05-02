@@ -5,17 +5,17 @@ import os
 
 app = Flask(__name__)
 
-# Carga segura de la API Key
+# Configuración de la API
 api_key = os.environ.get("GROQ_API_KEY")
 client = Groq(api_key=api_key) if api_key else None
 
 def generar_respuesta(texto):
     if not client:
-        return "Error: API Key no configurada en el servidor."
+        return "Error: API Key no configurada."
     
     t = texto.lower()
 
-    # Comandos Rápidos
+    # Comandos rápidos
     if "youtube" in t:
         return {"tipo": "accion", "mensaje": "Abriendo YouTube", "url": "https://youtube.com"}
     if "hora" in t:
@@ -27,7 +27,7 @@ def generar_respuesta(texto):
     try:
         chat = client.chat.completions.create(
             messages=[
-                {"role": "system", "content": "Eres un asistente tipo Jarvis para conducción. Respondes claro, breve y natural."},
+                {"role": "system", "content": "Eres un copiloto inteligente. Sé breve, claro y natural."},
                 {"role": "user", "content": texto}
             ],
             model="llama-3.1-8b-instant",
@@ -41,7 +41,7 @@ def generar_respuesta(texto):
 @app.route('/api/asistente', methods=['POST'])
 def asistente():
     data = request.json
-    texto = data.get("code", "") # Recibe 'code'
+    texto = data.get("code", "")
     respuesta = generar_respuesta(texto)
     return jsonify({"respuesta": respuesta})
 

@@ -8,247 +8,82 @@
         :root {
             --neon-blue: #00d4ff;
             --neon-green: #39ff14;
-            --neon-magenta: #ff00ff;
             --bg-dark: #050a0f;
             --glass: rgba(10, 25, 40, 0.6);
             --border-glow: 0 0 10px rgba(0, 212, 255, 0.3);
         }
-
-        body {
-            background-color: var(--bg-dark);
-            background-image: radial-gradient(circle at center, #1a2a3a 0%, #050a0f 70%);
-            color: white;
-            font-family: 'Segoe UI', Roboto, sans-serif;
-            margin: 0;
-            padding: 20px;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-sizing: border-box;
-            overflow: hidden;
-        }
-
-        .dashboard-container {
-            display: grid;
-            grid-template-columns: 320px 1fr 320px;
-            grid-template-rows: auto 1fr auto;
-            gap: 15px;
-            width: 100%;
-            max-width: 1600px;
-            height: 100%;
-        }
-
-        .panel {
-            background: var(--glass);
-            border: 1px solid rgba(0, 212, 255, 0.2);
-            border-radius: 12px;
-            padding: 20px;
-            backdrop-filter: blur(10px);
-            box-shadow: var(--border-glow);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .panel-header {
-            font-size: 0.8em;
-            color: #888;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            margin-bottom: 15px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            padding-bottom: 5px;
-        }
-
-        h2.main-title {
-            grid-column: span 3;
-            text-align: center;
-            color: var(--neon-blue);
-            text-transform: uppercase;
-            letter-spacing: 5px;
-            text-shadow: 0 0 15px var(--neon-blue);
-            margin: 0 0 10px 0;
-            font-size: 1.4em;
-        }
-
-        .left-col { grid-row: span 2; display: flex; flex-direction: column; gap: 15px; }
-        .center-col { display: flex; flex-direction: column; gap: 15px; }
-        .right-col { grid-row: span 2; display: flex; flex-direction: column; gap: 15px; }
-
-        .car-view-panel {
-            flex-grow: 1;
-            position: relative;
-            background-color: #000;
-            justify-content: center;
-            align-items: center;
-            display: flex;
-        }
-
-        #carView {
-            max-width: 90%;
-            max-height: 90%;
-            filter: drop-shadow(0 0 15px rgba(0, 212, 255, 0.7)) 
-                    drop-shadow(0 0 5px rgba(255, 0, 255, 0.5));
-            border-radius: 10px;
-        }
-
-        .chat-panel { height: 250px; }
-        #output {
-            background: rgba(0,0,0,0.3); border-left: 2px solid var(--neon-blue);
-            padding: 10px; margin-bottom: 10px; flex-grow: 1;
-            overflow-y: auto; color: #ccc; font-family: monospace;
-        }
-        .chat-input-container { display: flex; gap: 10px; }
-        input[type="text"] {
-            flex-grow: 1; padding: 10px; background: rgba(0,0,0,0.5);
-            border: 1px solid var(--neon-blue); color: var(--neon-blue);
-            border-radius: 5px; outline: none;
-        }
-        .btn-send {
-            padding: 10px 20px; background: transparent; color: var(--neon-blue);
-            border: 1px solid var(--neon-blue); border-radius: 5px; cursor: pointer;
-        }
-        .btn-mic {
-            width: 100px; height: 100px; border-radius: 50%;
-            background: radial-gradient(circle, var(--neon-blue), #005f73);
-            border: none; cursor: pointer;
-            box-shadow: 0 0 20px var(--neon-blue);
-            margin: 20px auto;
-        }
-        
-        .dashboard-footer {
-            grid-column: span 3;
-            display: flex; justify-content: space-around;
-            font-size: 0.8em; color: #666; text-transform: uppercase;
-        }
+        body { background-color: var(--bg-dark); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        .dashboard-container { display: grid; grid-template-columns: 320px 1fr 320px; gap: 15px; width: 100%; max-width: 1600px; height: 90vh; }
+        .panel { background: var(--glass); border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 12px; padding: 20px; box-shadow: var(--border-glow); }
+        .panel-header { font-size: 0.8em; color: #888; text-transform: uppercase; margin-bottom: 15px; }
+        #output { background: rgba(0,0,0,0.3); border-left: 2px solid var(--neon-blue); padding: 10px; height: 200px; overflow-y: auto; color: #ccc; font-family: monospace; margin-bottom: 10px; }
+        .btn-mic { width: 100px; height: 100px; border-radius: 50%; background: radial-gradient(circle, var(--neon-blue), #005f73); border: none; cursor: pointer; box-shadow: 0 0 20px var(--neon-blue); margin: 20px auto; display: block; }
+        input[type="text"] { width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid var(--neon-blue); color: var(--neon-blue); border-radius: 5px; }
     </style>
 </head>
 <body>
-
     <div class="dashboard-container">
-        <h2 class="main-title">APEXDASH - COPILOTO INTELIGENTE</h2>
-
-        <div class="left-col">
-            <div class="panel">
-                <div class="panel-header">SISTEMA</div>
-                <div style="text-align: center;">
-                    <h3 style="color:var(--neon-blue)">APEXDASH</h3>
-                    <p id="estado-sistema" style="color:var(--neon-green)">ESTADO: ACTIVO</p>
-                </div>
-            </div>
-            <div class="panel">
-                <div class="panel-header">CONTROL DE VOZ</div>
-                <button class="btn-mic" id="btn-mic" onclick="activarVozManual()"></button>
-                <p style="text-align: center;">PULSA PARA HABLAR</p>
-            </div>
+        <div class="panel">
+            <div class="panel-header">CONTROL DE VOZ</div>
+            <button class="btn-mic" id="btn-mic"></button>
+            <p style="text-align: center;">PULSA O HABLA</p>
         </div>
-
-        <div class="center-col">
-            <div class="panel car-view-panel">
-                <div class="panel-header">VISTA DE NAVE</div>
-                <img src="{{ url_for('static', filename='carro.png') }}" id="carView" alt="Chrysler Concorde">
-            </div>
-            <div class="panel chat-panel">
-                <div class="panel-header">CONSOLA DE MANDO</div>
-                <div id="output">Dash: Sistema en línea...</div>
-                <div class="chat-input-container">
-                    <input type="text" id="user-input" placeholder="Dash, escanea motor...">
-                    <button class="btn-send" onclick="enviarComandoTexto()">ENVIAR</button>
-                </div>
-            </div>
+        <div class="panel">
+            <div class="panel-header">CONSOLA DE MANDO</div>
+            <div id="output">Dash: Sistema en línea...</div>
+            <input type="text" id="user-input" placeholder="Escribe comando...">
         </div>
-
-        <div class="right-col">
-            <div class="panel">
-                <div class="panel-header">MONITOREO</div>
-                <p>RPM: --</p>
-                <p>Velocidad: --</p>
-                <p>Temp: --</p>
-            </div>
-        </div>
-
-        <div class="dashboard-footer">
-            <span>🛡 PRIVADO</span> <span>🔊 VOZ ACTIVA</span> <span>🚗 LISTO PARA CONDUCIR</span>
+        <div class="panel">
+            <div class="panel-header">MONITOREO</div>
+            <p>Sistema: ApexDash v1.0</p>
         </div>
     </div>
 
     <script>
-        // --- CONFIGURACIÓN DE VOZ Y RECONOCIMIENTO ---
         const output = document.getElementById('output');
+        const btnMic = document.getElementById('btn-mic');
+        
         const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
         recognition.lang = 'es-MX';
-        recognition.continuous = true; 
-        recognition.interimResults = false;
+        recognition.continuous = true;
 
-        // 1. EL SISTEMA HABLA (Text-to-Speech)
         function decir(texto) {
-            window.speechSynthesis.cancel(); 
+            window.speechSynthesis.cancel();
             const msg = new SpeechSynthesisUtterance(texto);
             msg.lang = 'es-MX';
-            msg.rate = 1.0;
             window.speechSynthesis.speak(msg);
         }
 
-        // 2. EL SISTEMA ESCUCHA (Speech-to-Text)
+        recognition.onstart = () => { btnMic.style.boxShadow = "0 0 40px var(--neon-green)"; };
+        recognition.onend = () => { btnMic.style.boxShadow = "0 0 20px var(--neon-blue)"; recognition.start(); };
+
         recognition.onresult = (event) => {
             const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
-            console.log("Detectado:", transcript);
-
             if (transcript.includes('dash')) {
                 const comando = transcript.split('dash')[1].trim();
-                if (comando) {
-                    procesarComando(comando);
-                } else {
-                    decir("¿En qué puedo ayudarte?");
-                }
+                if (comando) procesarComando(comando);
             }
         };
 
-        recognition.onend = () => { recognition.start(); };
-        recognition.start();
-
-        // 3. PROCESAR COMANDO (CORREGIDO PARA CONECTAR AL SERVIDOR)
         async function procesarComando(texto) {
-            output.innerHTML += `<br>Tú: ${texto}`;
-            output.scrollTop = output.scrollHeight;
-
+            output.innerHTML += `<br>> ${texto}`;
             try {
-                // Se corrigió la ruta a '/api/asistente' y el objeto a '{ code: texto }'
                 const response = await fetch('/api/asistente', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ code: texto })
                 });
-                
-                if (!response.ok) throw new Error('Error en el servidor');
-                
                 const data = await response.json();
-                
                 output.innerHTML += `<br>Dash: ${data.respuesta}`;
-                decir(data.respuesta); 
-                output.scrollTop = output.scrollHeight;
+                decir(data.respuesta);
             } catch (e) {
-                decir("Error de conexión con el sistema.");
-                console.error("Detalle:", e);
+                decir("Error de conexión.");
             }
         }
 
-        // 4. FUNCIONES DE INTERFAZ
-        function enviarComandoTexto() {
-            const input = document.getElementById('user-input');
-            if(input.value) {
-                procesarComando(input.value);
-                input.value = '';
-            }
-        }
-
-        function activarVozManual() {
-            decir("Escuchando...");
-            alert("Sistema en escucha manual...");
-        }
-
+        recognition.start();
         document.getElementById('user-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') enviarComandoTexto();
+            if (e.key === 'Enter') procesarComando(e.target.value);
         });
     </script>
 </body>
