@@ -177,12 +177,12 @@
         const output = document.getElementById('output');
         const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
         recognition.lang = 'es-MX';
-        recognition.continuous = true; // Escucha constante para detectar "Dash"
+        recognition.continuous = true; 
         recognition.interimResults = false;
 
         // 1. EL SISTEMA HABLA (Text-to-Speech)
         function decir(texto) {
-            window.speechSynthesis.cancel(); // Detiene cualquier audio previo
+            window.speechSynthesis.cancel(); 
             const msg = new SpeechSynthesisUtterance(texto);
             msg.lang = 'es-MX';
             msg.rate = 1.0;
@@ -204,29 +204,32 @@
             }
         };
 
-        // Reconectar si se detiene
         recognition.onend = () => { recognition.start(); };
         recognition.start();
 
-        // 3. PROCESAR COMANDO (Compartido por voz y texto)
+        // 3. PROCESAR COMANDO (CORREGIDO PARA CONECTAR AL SERVIDOR)
         async function procesarComando(texto) {
             output.innerHTML += `<br>Tú: ${texto}`;
             output.scrollTop = output.scrollHeight;
 
             try {
-                // Ajusta aquí la URL de tu API en Render
-                const response = await fetch('/api/comando', {
+                // Se corrigió la ruta a '/api/asistente' y el objeto a '{ code: texto }'
+                const response = await fetch('/api/asistente', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ mensaje: texto })
+                    body: JSON.stringify({ code: texto })
                 });
+                
+                if (!response.ok) throw new Error('Error en el servidor');
+                
                 const data = await response.json();
                 
                 output.innerHTML += `<br>Dash: ${data.respuesta}`;
-                decir(data.respuesta); // El sistema responde por voz
+                decir(data.respuesta); 
                 output.scrollTop = output.scrollHeight;
             } catch (e) {
                 decir("Error de conexión con el sistema.");
+                console.error("Detalle:", e);
             }
         }
 
@@ -241,11 +244,9 @@
 
         function activarVozManual() {
             decir("Escuchando...");
-            // Opcional: podrías poner aquí lógica para forzar escucha temporal
             alert("Sistema en escucha manual...");
         }
 
-        // Enter key support
         document.getElementById('user-input').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') enviarComandoTexto();
         });
