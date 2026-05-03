@@ -1,4 +1,4 @@
 flask
+gunicorn
 groq
 pytz
-gunicorn app:app
