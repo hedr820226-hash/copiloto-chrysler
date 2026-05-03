@@ -1,42 +1,23 @@
 from flask import Flask, request, jsonify
 import os
 from datetime import datetime
+import pytz
 from groq import Groq
 
 app = Flask(__name__)
 
-# 🔑 API KEY
 api_key = os.environ.get("GROQ_API_KEY")
 client = Groq(api_key=api_key) if api_key else None
 
-# 🧠 MEMORIA (simple)
+# memoria simple
 memoria = []
 
 # ------------------------
-# 🧠 MODOS
+# 🌸 PROMPT NOVA
 # ------------------------
 
-def detectar_modo(texto, modo_cliente):
-    if modo_cliente:
-        return modo_cliente
-
-    t = texto.lower()
-
-    if any(p in t for p in ["planta", "flor", "animal"]):
-        return "mama"
-
-    return "copiloto"
-
-
-def generar_prompt(modo):
-    if modo == "copiloto":
-        return """
-Eres Dash, un copiloto inteligente estilo Jarvis.
-Responde corto, claro y útil.
-"""
-
-    if modo == "mama":
-        return """
+def generar_prompt():
+    return """
 Eres Nova, una asistente amable y cariñosa que acompaña a Inés.
 
 PERSONALIDAD:
@@ -55,29 +36,26 @@ COMPORTAMIENTO:
 - Hazla sentir acompañada
 """
 
-    return "Eres un asistente útil."
-
-
 # ------------------------
-# 🤖 IA + MEMORIA
+# 🤖 RESPUESTA
 # ------------------------
 
-def generar_respuesta(texto, modo):
+def generar_respuesta(texto):
 
     t = texto.lower()
 
-    # 🔹 comandos rápidos
+    # ⏰ HORA MÉXICO
     if "hora" in t:
-        return {"response": f"Son las {datetime.now().strftime('%H:%M')}"}
+        tz = pytz.timezone("America/Mexico_City")
+        hora = datetime.now(tz).strftime("%H:%M")
+        return {"response": f"Inés 🌷 son las {hora}"}
 
     if not client:
         return {"response": "Sistema sin IA activa"}
 
     try:
-        prompt = generar_prompt(modo)
-
         mensajes = [
-            {"role": "system", "content": prompt},
+            {"role": "system", "content": generar_prompt()},
             *memoria,
             {"role": "user", "content": texto}
         ]
@@ -90,7 +68,6 @@ def generar_respuesta(texto, modo):
 
         respuesta = chat.choices[0].message.content
 
-        # 🧠 guardar memoria (máx 10 mensajes)
         memoria.append({"role": "user", "content": texto})
         memoria.append({"role": "assistant", "content": respuesta})
 
@@ -104,24 +81,15 @@ def generar_respuesta(texto, modo):
         print("Error IA:", e)
         return {"response": "Error en IA"}
 
-
 # ------------------------
-# 📱 ENDPOINT ANDROID
+# 📱 ENDPOINT
 # ------------------------
 
 @app.route('/chat', methods=['POST'])
 def chat():
     data = request.get_json()
-
     texto = data.get("message", "")
-    modo_cliente = data.get("modo", None)
-
-    modo = detectar_modo(texto, modo_cliente)
-
-    respuesta = generar_respuesta(texto, modo)
-
-    return jsonify(respuesta)
-
+    return jsonify(generar_respuesta(texto))
 
 # ------------------------
 # 🌐 HOME
@@ -130,7 +98,6 @@ def chat():
 @app.route('/')
 def home():
     return "Nova servidor activo 💙"
-
 
 # ------------------------
 # 🚀 RUN
