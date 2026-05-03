@@ -10,15 +10,26 @@ app = Flask(__name__)
 api_key = os.environ.get("GROQ_API_KEY")
 client = Groq(api_key=api_key) if api_key else None
 
-# 🧠 memoria simple (máximo 10 mensajes)
-memoria = []
+# 🧠 Memoria separada para cada uno
+historial = {
+    "nova": [],
+    "dash": []
+}
 
 # ------------------------
-# 🌸 PROMPT NOVA
+# 🌸 PROMPTS
 # ------------------------
 
-def generar_prompt():
-    return """
+def obtener_prompt(modo):
+    if modo == "dash":
+        return """
+Eres Dash, el Copiloto Mecánico Maestro. Tu base de conocimientos abarca desde vehículos de los años 80 hasta 2026.
+ANALIZA: Si recibes un código OBDII, determina la gravedad (Nivel 1: Leve, 2: Moderado, 3: Crítico/Grúa).
+RECOMENDACIÓN: Sugiere reparaciones si es posible en ruta, o recomienda grúa si es grave.
+ESTILO: Directo, profesional, enfocado en seguridad. Prioriza integridad del motor.
+"""
+    else: # Prompt original de Nova
+        return """
 Eres Nova, una asistente amable y cariñosa que acompaña a Inés.
 
 PERSONALIDAD:
@@ -41,15 +52,14 @@ COMPORTAMIENTO:
 # 🤖 RESPUESTA
 # ------------------------
 
-def generar_respuesta(texto):
-
+def generar_respuesta(texto, modo):
     t = texto.lower()
 
-    # ⏰ HORA MÉXICO
+    # ⏰ HORA MÉXICO (Funciona para ambos)
     if "hora" in t:
         tz = pytz.timezone("America/Mexico_City")
         hora = datetime.now(tz).strftime("%H:%M")
-        return {"response": f"Inés 🌷 son las {hora}"}
+        return {"response": f"Son las {hora}"}
 
     # 📴 sin IA
     if not client:
@@ -57,33 +67,33 @@ def generar_respuesta(texto):
 
     try:
         mensajes = [
-            {"role": "system", "content": generar_prompt()},
-            *memoria,
+            {"role": "system", "content": obtener_prompt(modo)},
+            *historial[modo],
             {"role": "user", "content": texto}
         ]
 
         chat = client.chat.completions.create(
             messages=mensajes,
             model="llama-3.1-8b-instant",
-            max_tokens=120
+            max_tokens=150
         )
 
         respuesta = chat.choices[0].message.content
 
-        # 🧠 guardar memoria
-        memoria.append({"role": "user", "content": texto})
-        memoria.append({"role": "assistant", "content": respuesta})
+        # 🧠 guardar memoria específica
+        historial[modo].append({"role": "user", "content": texto})
+        historial[modo].append({"role": "assistant", "content": respuesta})
 
         # limitar memoria
-        if len(memoria) > 10:
-            memoria.pop(0)
-            memoria.pop(0)
+        if len(historial[modo]) > 10:
+            historial[modo].pop(0)
+            historial[modo].pop(0)
 
         return {"response": respuesta}
 
     except Exception as e:
         print("Error IA:", e)
-        return {"response": "Lo siento Inés 💛 hubo un problema"}
+        return {"response": "Lo siento, hubo un problema 💛"}
 
 # ------------------------
 # 📱 ENDPOINT
@@ -94,10 +104,13 @@ def chat():
     try:
         data = request.get_json(force=True)
         texto = data.get("message", "")
+        # Si no envías "mode", se queda en "nova" automáticamente
+        modo = data.get("mode", "nova") 
     except:
         texto = ""
+        modo = "nova"
 
-    return jsonify(generar_respuesta(texto))
+    return jsonify(generar_respuesta(texto, modo))
 
 # ------------------------
 # 🌐 HOME
@@ -105,7 +118,7 @@ def chat():
 
 @app.route('/')
 def home():
-    return "Nova servidor activo 💙"
+    return "Servidor Nova & Dash activo 💙🚗"
 
 # ------------------------
 # 🚀 RUN (RENDER)
