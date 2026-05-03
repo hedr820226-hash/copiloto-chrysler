@@ -6,10 +6,11 @@ from groq import Groq
 
 app = Flask(__name__)
 
+# 🔑 API KEY
 api_key = os.environ.get("GROQ_API_KEY")
 client = Groq(api_key=api_key) if api_key else None
 
-# memoria simple
+# 🧠 memoria simple (máximo 10 mensajes)
 memoria = []
 
 # ------------------------
@@ -50,8 +51,9 @@ def generar_respuesta(texto):
         hora = datetime.now(tz).strftime("%H:%M")
         return {"response": f"Inés 🌷 son las {hora}"}
 
+    # 📴 sin IA
     if not client:
-        return {"response": "Sistema sin IA activa"}
+        return {"response": "Sistema funcionando sin IA 💛"}
 
     try:
         mensajes = [
@@ -68,9 +70,11 @@ def generar_respuesta(texto):
 
         respuesta = chat.choices[0].message.content
 
+        # 🧠 guardar memoria
         memoria.append({"role": "user", "content": texto})
         memoria.append({"role": "assistant", "content": respuesta})
 
+        # limitar memoria
         if len(memoria) > 10:
             memoria.pop(0)
             memoria.pop(0)
@@ -79,7 +83,7 @@ def generar_respuesta(texto):
 
     except Exception as e:
         print("Error IA:", e)
-        return {"response": "Error en IA"}
+        return {"response": "Lo siento Inés 💛 hubo un problema"}
 
 # ------------------------
 # 📱 ENDPOINT
@@ -87,8 +91,12 @@ def generar_respuesta(texto):
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    data = request.get_json()
-    texto = data.get("message", "")
+    try:
+        data = request.get_json(force=True)
+        texto = data.get("message", "")
+    except:
+        texto = ""
+
     return jsonify(generar_respuesta(texto))
 
 # ------------------------
@@ -100,7 +108,7 @@ def home():
     return "Nova servidor activo 💙"
 
 # ------------------------
-# 🚀 RUN
+# 🚀 RUN (RENDER)
 # ------------------------
 
 if __name__ == '__main__':
