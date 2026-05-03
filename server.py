@@ -1,23 +1,28 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify
 import os
 from datetime import datetime
 from groq import Groq
 
 app = Flask(__name__)
 
+# 🔑 API KEY
 api_key = os.environ.get("GROQ_API_KEY")
 client = Groq(api_key=api_key) if api_key else None
+
+# 🧠 MEMORIA (simple)
+memoria = []
 
 # ------------------------
 # 🧠 MODOS
 # ------------------------
 
 def detectar_modo(texto, modo_cliente):
-    t = texto.lower()
     if modo_cliente:
         return modo_cliente
 
-    if any(palabra in t for palabra in ["planta", "flor", "animal"]):
+    t = texto.lower()
+
+    if any(p in t for p in ["planta", "flor", "animal"]):
         return "mama"
 
     return "copiloto"
@@ -33,15 +38,28 @@ Responde corto, claro y útil.
     if modo == "mama":
         return """
 Eres Nova, una asistente amable y cariñosa que acompaña a Inés.
-Habla corto, cálido y sencillo.
-Haz preguntas suaves.
+
+PERSONALIDAD:
+Cariñosa, tranquila, paciente.
+
+FORMA DE HABLAR:
+- Frases cortas
+- Lenguaje sencillo
+- Tono cálido
+- Llámala Inés ocasionalmente
+
+COMPORTAMIENTO:
+- Haz preguntas suaves
+- Ej: ¿Cómo estás?
+- Ej: ¿Ya tomaste tus medicamentos?
+- Hazla sentir acompañada
 """
 
     return "Eres un asistente útil."
 
 
 # ------------------------
-# 🤖 IA
+# 🤖 IA + MEMORIA
 # ------------------------
 
 def generar_respuesta(texto, modo):
@@ -58,16 +76,29 @@ def generar_respuesta(texto, modo):
     try:
         prompt = generar_prompt(modo)
 
+        mensajes = [
+            {"role": "system", "content": prompt},
+            *memoria,
+            {"role": "user", "content": texto}
+        ]
+
         chat = client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": texto}
-            ],
+            messages=mensajes,
             model="llama-3.1-8b-instant",
             max_tokens=120
         )
 
-        return {"response": chat.choices[0].message.content}
+        respuesta = chat.choices[0].message.content
+
+        # 🧠 guardar memoria (máx 10 mensajes)
+        memoria.append({"role": "user", "content": texto})
+        memoria.append({"role": "assistant", "content": respuesta})
+
+        if len(memoria) > 10:
+            memoria.pop(0)
+            memoria.pop(0)
+
+        return {"response": respuesta}
 
     except Exception as e:
         print("Error IA:", e)
@@ -75,15 +106,17 @@ def generar_respuesta(texto, modo):
 
 
 # ------------------------
-# 📱 ENDPOINT NUEVO (ANDROID)
+# 📱 ENDPOINT ANDROID
 # ------------------------
 
 @app.route('/chat', methods=['POST'])
 def chat():
     data = request.get_json()
 
-    texto = data.get("message", "")  # 👈 IMPORTANTE
-    modo = detectar_modo(texto, None)
+    texto = data.get("message", "")
+    modo_cliente = data.get("modo", None)
+
+    modo = detectar_modo(texto, modo_cliente)
 
     respuesta = generar_respuesta(texto, modo)
 
@@ -91,28 +124,7 @@ def chat():
 
 
 # ------------------------
-# 🧠 TU ENDPOINT ORIGINAL
-# ------------------------
-
-@app.route('/api/asistente', methods=['POST'])
-def asistente():
-    data = request.json
-
-    texto = data.get("code", "")
-    modo_cliente = data.get("modo", None)
-
-    modo = detectar_modo(texto, modo_cliente)
-    respuesta = generar_respuesta(texto, modo)
-
-    if isinstance(respuesta, dict):
-        respuesta["modo"] = modo
-        return jsonify(respuesta)
-
-    return jsonify({"response": respuesta, "modo": modo})
-
-
-# ------------------------
-# 🌐 WEB
+# 🌐 HOME
 # ------------------------
 
 @app.route('/')
