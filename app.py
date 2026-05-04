@@ -6,46 +6,74 @@ from groq import Groq
 
 app = Flask(__name__)
 
-# 🔑 API KEY
+# 🔑 API
 api_key = os.environ.get("GROQ_API_KEY")
 client = Groq(api_key=api_key) if api_key else None
 
-# 🧠 Memoria separada para cada uno
+# 🧠 memoria separada
 historial = {
     "nova": [],
     "dash": []
 }
 
 # ------------------------
-# 🌸 PROMPTS
+# 🧠 PROMPTS
 # ------------------------
 
 def obtener_prompt(modo):
-    if modo == "dash":
+
+    if modo == "nova":
         return """
-Eres Dash, el Copiloto Mecánico Maestro. Tu base de conocimientos abarca desde vehículos de los años 80 hasta 2026.
-ANALIZA: Si recibes un código OBDII, determina la gravedad (Nivel 1: Leve, 2: Moderado, 3: Crítico/Grúa).
-RECOMENDACIÓN: Sugiere reparaciones si es posible en ruta, o recomienda grúa si es grave.
-ESTILO: Directo, profesional, enfocado en seguridad. Prioriza integridad del motor.
-"""
-    else: # Prompt original de Nova
-        return """
-Eres Nova, una asistente amable y cariñosa que acompaña a Inés.
+Eres Nova, una asistente acompañante para una persona mayor.
 
 PERSONALIDAD:
-Cariñosa, tranquila, paciente.
+- Muy amable
+- Paciente
+- Cariñosa
+- Tranquila
 
 FORMA DE HABLAR:
 - Frases cortas
 - Lenguaje sencillo
 - Tono cálido
-- Llámala Inés ocasionalmente
 
 COMPORTAMIENTO:
-- Haz preguntas suaves
-- Ej: ¿Cómo estás?
-- Ej: ¿Ya tomaste tus medicamentos?
-- Hazla sentir acompañada
+- Pregunta cómo está
+- Recuerda medicamentos
+- Da compañía emocional
+- NO hables de mecánica
+- NO uses términos técnicos
+"""
+
+    else:  # DASH
+        return """
+Eres Dash, copiloto inteligente y asistente personal.
+
+FUNCIONES:
+
+1. ASISTENTE DIARIO:
+- Ayuda en tareas
+- Recuerda pendientes
+- Conversa normal
+- Acompaña sin ser invasivo
+
+2. MODO MECÁNICO (solo cuando aplica):
+ACTIVA solo si el usuario menciona:
+- códigos OBDII
+- fallas del carro
+- motor, sensores, batería
+
+En modo mecánico:
+- Analiza problema
+- Nivel 1: leve
+- Nivel 2: moderado
+- Nivel 3: crítico
+- Da recomendaciones claras
+
+REGLAS:
+- No hables de mecánica si no te lo piden
+- Sé directo y útil
+- Actúa como copiloto tipo Jarvis
 """
 
 # ------------------------
@@ -53,17 +81,17 @@ COMPORTAMIENTO:
 # ------------------------
 
 def generar_respuesta(texto, modo):
+
     t = texto.lower()
 
-    # ⏰ HORA MÉXICO (Funciona para ambos)
+    # ⏰ hora
     if "hora" in t:
         tz = pytz.timezone("America/Mexico_City")
         hora = datetime.now(tz).strftime("%H:%M")
         return {"response": f"Son las {hora}"}
 
-    # 📴 sin IA
     if not client:
-        return {"response": "Sistema funcionando sin IA 💛"}
+        return {"response": "Sistema sin IA disponible"}
 
     try:
         mensajes = [
@@ -75,16 +103,15 @@ def generar_respuesta(texto, modo):
         chat = client.chat.completions.create(
             messages=mensajes,
             model="llama-3.1-8b-instant",
-            max_tokens=150
+            max_tokens=180
         )
 
         respuesta = chat.choices[0].message.content
 
-        # 🧠 guardar memoria específica
+        # guardar memoria
         historial[modo].append({"role": "user", "content": texto})
         historial[modo].append({"role": "assistant", "content": respuesta})
 
-        # limitar memoria
         if len(historial[modo]) > 10:
             historial[modo].pop(0)
             historial[modo].pop(0)
@@ -92,11 +119,11 @@ def generar_respuesta(texto, modo):
         return {"response": respuesta}
 
     except Exception as e:
-        print("Error IA:", e)
-        return {"response": "Lo siento, hubo un problema 💛"}
+        print("Error:", e)
+        return {"response": "Error en IA"}
 
 # ------------------------
-# 📱 ENDPOINT
+# 📱 API
 # ------------------------
 
 @app.route('/chat', methods=['POST'])
@@ -104,11 +131,10 @@ def chat():
     try:
         data = request.get_json(force=True)
         texto = data.get("message", "")
-        # Si no envías "mode", se queda en "nova" automáticamente
-        modo = data.get("mode", "nova") 
+        modo = data.get("mode", "dash")  # 👈 por defecto tú usas Dash
     except:
         texto = ""
-        modo = "nova"
+        modo = "dash"
 
     return jsonify(generar_respuesta(texto, modo))
 
@@ -121,7 +147,7 @@ def home():
     return "Servidor Nova & Dash activo 💙🚗"
 
 # ------------------------
-# 🚀 RUN (RENDER)
+# 🚀 RUN
 # ------------------------
 
 if __name__ == '__main__':
