@@ -14,19 +14,18 @@ api_key = os.environ.get("GROQ_API_KEY")
 client = Groq(api_key=api_key) if api_key else None
 
 # =====================================
-# 🧠 MEMORIA
+# 🧠 MEMORIA DASH
 # =====================================
 
 historial = {
-    "nova": [],
     "dash": []
 }
 
 # =====================================
-# 🧠 PERSONALIDADES
+# 🧠 PERSONALIDAD DASH
 # =====================================
 
-def obtener_prompt(modo):
+def obtener_prompt():
 
     return """
 Eres Dash.
@@ -65,33 +64,7 @@ ESTILO:
 - No digas “modo mecánico”
 - No fuerces temas automotrices
 - Mantén respuestas fluidas y humanas
-- A veces usa humor ligero
-
-EJEMPLOS:
-
-Usuario:
-“Cómo ves el carro”
-
-Dash:
-“Por ahora estable. Aunque quiero revisar nuevamente el voltaje.”
-
-Usuario:
-“Dash”
-
-Dash:
-“Te escucho.”
-
-Usuario:
-“Tengo calor”
-
-Dash:
-“El motor también subió un poco de temperatura.”
-
-Usuario:
-“Estoy cansado”
-
-Dash:
-“Entonces manejemos tranquilo hoy.”
+- Usa humor ligero ocasionalmente
 
 Nunca digas que eres ChatGPT.
 Nunca digas que eres una IA genérica.
@@ -101,13 +74,11 @@ Nunca digas que eres una IA genérica.
 # 🤖 IA
 # =====================================
 
-def generar_respuesta(texto, modo):
+def generar_respuesta(texto):
 
     t = texto.lower()
 
-    # ---------------------------------
-    # ⏰ HORA
-    # ---------------------------------
+    # ⏰ Hora
 
     if "hora" in t:
 
@@ -119,9 +90,7 @@ def generar_respuesta(texto, modo):
             "response": f"Son las {hora}"
         }
 
-    # ---------------------------------
-    # ❌ IA OFFLINE
-    # ---------------------------------
+    # ❌ IA offline
 
     if not client:
 
@@ -135,20 +104,16 @@ def generar_respuesta(texto, modo):
 
             {
                 "role": "system",
-                "content": obtener_prompt(modo)
+                "content": obtener_prompt()
             },
 
-            *historial[modo],
+            *historial["dash"],
 
             {
                 "role": "user",
                 "content": texto
             }
         ]
-
-        # ---------------------------------
-        # 🚀 IA
-        # ---------------------------------
 
         chat = client.chat.completions.create(
 
@@ -163,24 +128,22 @@ def generar_respuesta(texto, modo):
 
         respuesta = chat.choices[0].message.content
 
-        # ---------------------------------
         # 🧠 MEMORIA
-        # ---------------------------------
 
-        historial[modo].append({
+        historial["dash"].append({
             "role": "user",
             "content": texto
         })
 
-        historial[modo].append({
+        historial["dash"].append({
             "role": "assistant",
             "content": respuesta
         })
 
-        # limitar memoria
+        # límite memoria
 
-        if len(historial[modo]) > 20:
-            historial[modo] = historial[modo][-20:]
+        if len(historial["dash"]) > 20:
+            historial["dash"] = historial["dash"][-20:]
 
         return {
             "response": respuesta
@@ -195,7 +158,7 @@ def generar_respuesta(texto, modo):
         }
 
 # =====================================
-# 📱 CHAT API
+# 📱 API CHAT
 # =====================================
 
 @app.route('/chat', methods=['POST'])
@@ -207,16 +170,12 @@ def chat():
 
         texto = data.get("message", "")
 
-        modo = data.get("mode", "dash")
-
     except:
 
         texto = ""
 
-        modo = "dash"
-
     return jsonify(
-        generar_respuesta(texto, modo)
+        generar_respuesta(texto)
     )
 
 # =====================================
@@ -352,10 +311,10 @@ img{
 </div>
 
 <div class="info">
-Dash & Nova activos
+Dash Copilot Online
 </div>
 
-<img src="https://i.imgur.com/F9DhY0o.jpeg">
+<img src="/static/carro.png">
 
 <div class="info">
 Copiloto inteligente futurista
