@@ -25,7 +25,8 @@ historial = {
 # 🧠 PERSONALIDAD DASH
 # =====================================
 
-else:  # DASH
+def obtener_prompt():
+
     return """
 Eres Dash, el asistente inteligente del vehículo y compañero diario del conductor.
 
