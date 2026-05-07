@@ -806,6 +806,57 @@ Compatible incluso con teléfonos modestos de 2GB RAM.
 
 </section>
 
+
+
+<section class='features'>
+
+<h2 class='section-title'>
+El origen de ApexDash
+</h2>
+
+<div class='grid'>
+
+<div class='card' style='grid-column:1/-1;text-align:center;'>
+
+<h3>
+🚗 Inspirado en un clásico de los 90
+</h3>
+
+<p style='max-width:900px;margin:auto;'>
+
+ApexDash nació con una idea simple:
+demostrar que un automóvil de los 90 todavía puede sentirse futurista.
+
+El proyecto fue inspirado por un vehículo de 1996 equipado con OBD2,
+demostrando que incluso los coches clásicos pueden seguir evolucionando con tecnología moderna.
+
+Porque un carro viejo no tiene por qué sentirse viejo.
+
+</p>
+
+<br>
+
+<img src='/static/carro.png'
+style='width:100%;max-width:750px;border-radius:24px;
+box-shadow:0 0 35px rgba(0,255,255,0.35);
+border:1px solid rgba(0,255,255,0.2);'>
+
+<br><br>
+
+<p style='color:#7ecfff;'>
+
+La visión de ApexDash es llevar funciones inteligentes y copilotos futuristas
+a vehículos reales que todavía siguen rodando todos los días.
+
+</p>
+
+</div>
+
+</div>
+
+</section>
+
+
 <div class='footer'>
 
 <h2>
