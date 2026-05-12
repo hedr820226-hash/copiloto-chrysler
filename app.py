@@ -28,7 +28,7 @@ historial = {
 # 🧠 PERSONALIDAD DASH
 # =====================================
 
-def"content": obtener_prompt() + contexto_auto
+def obtener_prompt():
 
     return """
 Eres Dash, el copiloto inteligente del vehículo.
