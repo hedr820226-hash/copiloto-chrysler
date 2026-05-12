@@ -28,7 +28,7 @@ historial = {
 # 🧠 PERSONALIDAD DASH
 # =====================================
 
-def obtener_prompt():
+def"content": obtener_prompt() + contexto_auto
 
     return """
 Eres Dash, el copiloto inteligente del vehículo.
@@ -167,6 +167,8 @@ def generar_respuesta(texto):
 
     try:
 
+
+
         mensajes = [
 
             {
@@ -252,6 +254,36 @@ def chat():
             ""
         )
 
+        rpm = data.get("rpm", 0)
+
+        speed = data.get("speed", 0)
+
+        temp = data.get("temp", 0)
+
+        volt = data.get("volt", 0)
+
+        ltft = data.get("ltft", 0)
+
+        mapv = data.get("map", 0)
+
+        tps = data.get("tps", 0)
+
+        contexto_auto = f"""
+
+DATOS DEL VEHICULO:
+
+RPM: {rpm}
+Velocidad: {speed} km/h
+Temperatura: {temp} C
+Voltaje: {volt} V
+LTFT: {ltft}
+MAP: {mapv} kPa
+TPS: {tps} %
+
+"""
+
+        texto = contexto_auto + "\n\nUsuario: " + texto
+
     except:
 
         texto = ""
@@ -259,7 +291,6 @@ def chat():
     return jsonify(
         generar_respuesta(texto)
     )
-
 # =====================================
 # 🌐 HOME PREMIUM
 # =====================================
