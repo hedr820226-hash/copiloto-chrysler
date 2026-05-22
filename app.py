@@ -18,16 +18,15 @@ client = Groq(
 ) if api_key else None
 
 # =====================================
-# 🌦️ CLIMA API
+# 🌦️ WEATHER API
 # =====================================
 
-WEATHER_API =
-    os.environ.get(
-        "OPENWEATHER_API"
-    )
+WEATHER_API = os.environ.get(
+    "OPENWEATHER_API"
+)
 
 # =====================================
-# 🧠 MEMORIA DASH
+# 🧠 MEMORIA
 # =====================================
 
 historial = {
@@ -40,7 +39,7 @@ estado_usuario = {
 }
 
 # =====================================
-# 🧠 PERSONALIDAD DASH
+# 🧠 PERSONALIDAD
 # =====================================
 
 def obtener_prompt():
@@ -218,6 +217,7 @@ def detectar_estado(texto):
     if (
         "cansado" in t
         or "sueño" in t
+        or "dormir" in t
     ):
 
         estado_usuario["mood"] = "cansado"
@@ -225,6 +225,7 @@ def detectar_estado(texto):
     elif (
         "enojado" in t
         or "frustrado" in t
+        or "molesto" in t
     ):
 
         estado_usuario["mood"] = "frustrado"
@@ -232,6 +233,7 @@ def detectar_estado(texto):
     elif (
         "feliz" in t
         or "jaja" in t
+        or "genial" in t
     ):
 
         estado_usuario["mood"] = "positivo"
@@ -250,10 +252,14 @@ def obtener_clima(lat, lon):
 
         if not WEATHER_API:
 
-            return "No tengo acceso al clima ahorita."
+            return (
+                "No tengo acceso "
+                "al clima ahorita."
+            )
 
         url = (
-            f"https://api.openweathermap.org/data/2.5/weather"
+            "https://api.openweathermap.org"
+            "/data/2.5/weather"
             f"?lat={lat}"
             f"&lon={lon}"
             f"&appid={WEATHER_API}"
@@ -268,11 +274,11 @@ def obtener_clima(lat, lon):
 
         data = r.json()
 
-        temp =
-            data["main"]["temp"]
+        temp = data["main"]["temp"]
 
-        desc =
-            data["weather"][0]["description"]
+        desc = data["weather"][0][
+            "description"
+        ]
 
         return (
             f"Está {desc} "
@@ -280,7 +286,9 @@ def obtener_clima(lat, lon):
             f"los {round(temp)} grados."
         )
 
-    except:
+    except Exception as e:
+
+        print("ERROR CLIMA:", e)
 
         return (
             "No pude obtener "
@@ -301,7 +309,7 @@ def generar_respuesta(
     detectar_estado(texto)
 
     # =====================================
-    # LOCAL FUNCTIONS
+    # FUNCIONES LOCALES
     # =====================================
 
     if (
@@ -334,7 +342,9 @@ def generar_respuesta(
             "America/Mexico_City"
         )
 
-        hora = datetime.now(tz).strftime("%H:%M")
+        hora = datetime.now(tz).strftime(
+            "%H:%M"
+        )
 
         return {
             "response":
@@ -361,17 +371,6 @@ def generar_respuesta(
         return {
             "response":
             f"Hoy es {fecha}"
-        }
-
-    # =====================================
-    # CLIMA
-    # =====================================
-
-    if "clima" in t:
-
-        return {
-            "response":
-            "Puedo revisar el clima si me compartes ubicación."
         }
 
     # =====================================
@@ -437,6 +436,10 @@ def generar_respuesta(
             "content": respuesta
         })
 
+        # =====================================
+        # LIMITAR MEMORIA
+        # =====================================
+
         if len(historial["dash"]) > 20:
 
             historial["dash"] = (
@@ -457,10 +460,13 @@ def generar_respuesta(
         }
 
 # =====================================
-# 📱 API CHAT
+# 📱 CHAT API
 # =====================================
 
-@app.route('/chat', methods=['POST'])
+@app.route(
+    '/chat',
+    methods=['POST']
+)
 def chat():
 
     try:
@@ -492,19 +498,9 @@ def chat():
 
         lon = data.get("lon", 0)
 
-        contexto_auto = f"""
-
-DATOS DEL VEHICULO:
-
-RPM: {rpm}
-Velocidad: {speed} km/h
-Temperatura: {temp} C
-Voltaje: {volt} V
-LTFT: {ltft}
-MAP: {mapv} kPa
-TPS: {tps} %
-
-"""
+        # =====================================
+        # CLIMA LOCAL
+        # =====================================
 
         if (
             "clima" in texto.lower()
@@ -521,9 +517,30 @@ TPS: {tps} %
                 )
             })
 
-    except:
+        # =====================================
+        # CONTEXTO AUTO
+        # =====================================
+
+        contexto_auto = f"""
+
+DATOS DEL VEHICULO:
+
+RPM: {rpm}
+Velocidad: {speed} km/h
+Temperatura: {temp} C
+Voltaje: {volt} V
+LTFT: {ltft}
+MAP: {mapv} kPa
+TPS: {tps} %
+
+"""
+
+    except Exception as e:
+
+        print("ERROR CHAT:", e)
 
         texto = ""
+
         contexto_auto = ""
 
     return jsonify(
