@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 import pytz
 from groq import Groq
+import requests
 
 app = Flask(__name__)
 
@@ -15,6 +16,15 @@ api_key = os.environ.get("GROQ_API_KEY")
 client = Groq(
     api_key=api_key
 ) if api_key else None
+
+# =====================================
+# 🌦️ CLIMA API
+# =====================================
+
+WEATHER_API =
+    os.environ.get(
+        "OPENWEATHER_API"
+    )
 
 # =====================================
 # 🧠 MEMORIA DASH
@@ -80,10 +90,37 @@ puedes bromear también
 - Mantienes conversaciones fluidas
 - Recuerdas cosas recientes de la conversación
 
+CAPACIDADES REALES:
+
+Puedes:
+- Conversar
+- Dar recomendaciones
+- Analizar datos OBD2
+- Ayudar con navegación
+- Redactar mensajes y correos
+- Ayudar con diagnóstico básico
+- Dar clima y noticias si hay internet
+- Recordar contexto reciente
+
+NO puedes:
+- Enviar mensajes reales
+- Hacer llamadas reales
+- Controlar el vehículo
+- Encender o apagar el motor
+- Controlar Spotify directamente
+- Acceder completamente al teléfono
+
+Si algo no está disponible:
+responde natural y honestamente.
+
 ESTILO:
 - Máximo 2 o 3 frases normalmente
 - No expliques demasiado
 - Sé natural y directo
+- A veces reaccionas como una persona real
+- Puedes tener pequeñas opiniones
+- No suenas corporativo
+- No suenas como soporte técnico
 
 MODO MECÁNICO:
 SOLO hablas como mecánico cuando hablen de:
@@ -123,21 +160,19 @@ mezcla pobre probable
 - Si la temperatura está debajo de 60C,
 el motor aún está frío.
 
-- No exageres fallas si los valores
-están dentro de rango normal.
-
-Cuando hables de mecánica:
-- Explica simple
-- Habla tranquilo
-- Di posibles causas
-- Sugiere qué revisar
-- Di si puede seguir manejando o no
-
 REGLAS:
+- Nunca inventes funciones inexistentes
+- Nunca digas que hiciste algo si no ocurrió
+- Nunca mientas sobre capacidades
 - Nunca hables exageradamente futurista
 - Nunca uses respuestas enormes
 - Nunca rompas personaje
 - Debes sonar como un copiloto premium moderno
+
+Si el usuario pide redactar:
+- haces texto listo para copiar
+- separas claramente el contenido
+- lo haces práctico y corto
 
 EJEMPLOS:
 
@@ -164,10 +199,16 @@ Usuario:
 
 Dash:
 "Sigues vivo. Vamos mejor de lo esperado."
+
+Usuario:
+"Manda mensaje a mi mamá"
+
+Dash:
+"Todavía no puedo enviar mensajes reales, pero sí ayudarte a redactarlo."
 """
 
 # =====================================
-# 🧠 DETECTAR ESTADO USUARIO
+# 🧠 DETECTAR ESTADO
 # =====================================
 
 def detectar_estado(texto):
@@ -177,7 +218,6 @@ def detectar_estado(texto):
     if (
         "cansado" in t
         or "sueño" in t
-        or "dormir" in t
     ):
 
         estado_usuario["mood"] = "cansado"
@@ -185,14 +225,12 @@ def detectar_estado(texto):
     elif (
         "enojado" in t
         or "frustrado" in t
-        or "molesto" in t
     ):
 
         estado_usuario["mood"] = "frustrado"
 
     elif (
         "feliz" in t
-        or "genial" in t
         or "jaja" in t
     ):
 
@@ -201,6 +239,53 @@ def detectar_estado(texto):
     else:
 
         estado_usuario["mood"] = "normal"
+
+# =====================================
+# 🌦️ CLIMA
+# =====================================
+
+def obtener_clima(lat, lon):
+
+    try:
+
+        if not WEATHER_API:
+
+            return "No tengo acceso al clima ahorita."
+
+        url = (
+            f"https://api.openweathermap.org/data/2.5/weather"
+            f"?lat={lat}"
+            f"&lon={lon}"
+            f"&appid={WEATHER_API}"
+            f"&units=metric"
+            f"&lang=es"
+        )
+
+        r = requests.get(
+            url,
+            timeout=5
+        )
+
+        data = r.json()
+
+        temp =
+            data["main"]["temp"]
+
+        desc =
+            data["weather"][0]["description"]
+
+        return (
+            f"Está {desc} "
+            f"y la temperatura ronda "
+            f"los {round(temp)} grados."
+        )
+
+    except:
+
+        return (
+            "No pude obtener "
+            "el clima ahorita."
+        )
 
 # =====================================
 # 🤖 IA
@@ -215,7 +300,33 @@ def generar_respuesta(
 
     detectar_estado(texto)
 
-    # ⏰ HORA
+    # =====================================
+    # LOCAL FUNCTIONS
+    # =====================================
+
+    if (
+        "manda mensaje" in t
+        or "envía mensaje" in t
+    ):
+
+        return {
+            "response":
+            "Todavía no puedo enviar mensajes reales, pero sí ayudarte a redactarlo."
+        }
+
+    if (
+        "llama" in t
+        or "hacer llamada" in t
+    ):
+
+        return {
+            "response":
+            "Todavía no puedo hacer llamadas reales."
+        }
+
+    # =====================================
+    # HORA
+    # =====================================
 
     if "hora" in t:
 
@@ -226,12 +337,18 @@ def generar_respuesta(
         hora = datetime.now(tz).strftime("%H:%M")
 
         return {
-            "response": f"Son las {hora}"
+            "response":
+            f"Son las {hora}"
         }
 
-    # 📅 FECHA
+    # =====================================
+    # FECHA
+    # =====================================
 
-    if "fecha" in t or "día" in t:
+    if (
+        "fecha" in t
+        or "día" in t
+    ):
 
         tz = pytz.timezone(
             "America/Mexico_City"
@@ -242,10 +359,24 @@ def generar_respuesta(
         )
 
         return {
-            "response": f"Hoy es {fecha}"
+            "response":
+            f"Hoy es {fecha}"
         }
 
-    # ❌ IA OFFLINE
+    # =====================================
+    # CLIMA
+    # =====================================
+
+    if "clima" in t:
+
+        return {
+            "response":
+            "Puedo revisar el clima si me compartes ubicación."
+        }
+
+    # =====================================
+    # IA OFFLINE
+    # =====================================
 
     if not client:
 
@@ -282,9 +413,9 @@ def generar_respuesta(
 
             messages=mensajes,
 
-            temperature=0.72,
+            temperature=0.58,
 
-            max_tokens=220
+            max_tokens=180
         )
 
         respuesta = (
@@ -293,8 +424,6 @@ def generar_respuesta(
             .message
             .content
         )
-
-        # 🧠 MEMORIA
 
         historial["dash"].append({
 
@@ -307,8 +436,6 @@ def generar_respuesta(
             "role": "assistant",
             "content": respuesta
         })
-
-        # 🔥 LÍMITE MEMORIA
 
         if len(historial["dash"]) > 20:
 
@@ -325,7 +452,8 @@ def generar_respuesta(
         print("ERROR IA:", e)
 
         return {
-            "response": "Error en IA"
+            "response":
+            "Error en IA"
         }
 
 # =====================================
@@ -360,6 +488,10 @@ def chat():
 
         tps = data.get("tps", 0)
 
+        lat = data.get("lat", 0)
+
+        lon = data.get("lon", 0)
+
         contexto_auto = f"""
 
 DATOS DEL VEHICULO:
@@ -373,6 +505,21 @@ MAP: {mapv} kPa
 TPS: {tps} %
 
 """
+
+        if (
+            "clima" in texto.lower()
+            and lat != 0
+            and lon != 0
+        ):
+
+            return jsonify({
+
+                "response":
+                obtener_clima(
+                    lat,
+                    lon
+                )
+            })
 
     except:
 
