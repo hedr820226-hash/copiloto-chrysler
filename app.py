@@ -24,6 +24,11 @@ historial = {
     "dash": []
 }
 
+estado_usuario = {
+    "mood": "normal",
+    "last_topic": ""
+}
+
 # =====================================
 # 🧠 PERSONALIDAD DASH
 # =====================================
@@ -60,6 +65,20 @@ COMPORTAMIENTO:
 - Puedes hablar de música, tráfico, comida, carros y cualquier tema
 - Das recomendaciones útiles y rápidas
 - Te comportas como un compañero dentro del auto
+
+INTELIGENCIA EMOCIONAL:
+- Detectas emociones del usuario
+- Si el usuario está cansado:
+hablas más tranquilo
+- Si el usuario está frustrado:
+respondes calmado
+- Si el usuario bromea:
+puedes bromear también
+- Adaptas tu tono naturalmente
+- Puedes reaccionar como un amigo real
+- Puedes mostrar preocupación moderada
+- Mantienes conversaciones fluidas
+- Recuerdas cosas recientes de la conversación
 
 ESTILO:
 - Máximo 2 o 3 frases normalmente
@@ -148,12 +167,53 @@ Dash:
 """
 
 # =====================================
+# 🧠 DETECTAR ESTADO USUARIO
+# =====================================
+
+def detectar_estado(texto):
+
+    t = texto.lower()
+
+    if (
+        "cansado" in t
+        or "sueño" in t
+        or "dormir" in t
+    ):
+
+        estado_usuario["mood"] = "cansado"
+
+    elif (
+        "enojado" in t
+        or "frustrado" in t
+        or "molesto" in t
+    ):
+
+        estado_usuario["mood"] = "frustrado"
+
+    elif (
+        "feliz" in t
+        or "genial" in t
+        or "jaja" in t
+    ):
+
+        estado_usuario["mood"] = "positivo"
+
+    else:
+
+        estado_usuario["mood"] = "normal"
+
+# =====================================
 # 🤖 IA
 # =====================================
 
-def generar_respuesta(texto):
+def generar_respuesta(
+        texto,
+        contexto_auto=""
+):
 
     t = texto.lower()
+
+    detectar_estado(texto)
 
     # ⏰ HORA
 
@@ -196,13 +256,16 @@ def generar_respuesta(texto):
 
     try:
 
-
-
         mensajes = [
 
             {
                 "role": "system",
                 "content": obtener_prompt()
+            },
+
+            {
+                "role": "system",
+                "content": contexto_auto
             },
 
             *historial["dash"],
@@ -219,7 +282,7 @@ def generar_respuesta(texto):
 
             messages=mensajes,
 
-            temperature=0.88,
+            temperature=0.72,
 
             max_tokens=220
         )
@@ -311,629 +374,26 @@ TPS: {tps} %
 
 """
 
-        texto = contexto_auto + "\n\nUsuario: " + texto
-
     except:
 
         texto = ""
+        contexto_auto = ""
 
     return jsonify(
-        generar_respuesta(texto)
+        generar_respuesta(
+            texto,
+            contexto_auto
+        )
     )
+
 # =====================================
-# 🌐 HOME PREMIUM
+# 🌐 HOME
 # =====================================
 
 @app.route('/')
 def home():
 
-    return """
-
-<!DOCTYPE html>
-
-<html lang='es'>
-
-<head>
-
-<meta charset='UTF-8'>
-
-<meta name='viewport'
-content='width=device-width, initial-scale=1.0'>
-
-<title>ApexDash AI</title>
-
-<style>
-
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-}
-
-body{
-
-    background:#050816;
-    color:white;
-    font-family:Arial;
-    overflow-x:hidden;
-}
-
-body::before{
-
-    content:"";
-
-    position:fixed;
-
-    inset:0;
-
-    background:
-
-    radial-gradient(
-    circle at top,
-    rgba(0,255,255,0.15),
-    transparent 40%),
-
-    radial-gradient(
-    circle at bottom,
-    rgba(0,255,128,0.10),
-    transparent 40%);
-
-    z-index:-1;
-}
-
-header{
-
-    width:100%;
-
-    padding:25px 8%;
-
-    display:flex;
-
-    justify-content:space-between;
-
-    align-items:center;
-
-    position:fixed;
-
-    top:0;
-
-    backdrop-filter:blur(12px);
-
-    background:rgba(0,0,0,0.35);
-
-    border-bottom:
-    1px solid rgba(0,255,255,0.12);
-
-    z-index:999;
-}
-
-.logo{
-
-    font-size:28px;
-
-    color:#00ffff;
-
-    font-weight:bold;
-
-    text-shadow:0 0 18px cyan;
-}
-
-.hero{
-
-    min-height:100vh;
-
-    display:flex;
-
-    align-items:center;
-
-    justify-content:center;
-
-    gap:50px;
-
-    flex-wrap:wrap;
-
-    padding:120px 8% 60px;
-}
-
-.hero-left{
-
-    flex:1;
-
-    min-width:320px;
-}
-
-.hero-left h1{
-
-    font-size:72px;
-
-    line-height:1.1;
-
-    color:#00ffff;
-
-    text-shadow:0 0 30px cyan;
-}
-
-.hero-left p{
-
-    margin-top:25px;
-
-    color:#b8dfff;
-
-    font-size:20px;
-
-    line-height:1.7;
-
-    max-width:650px;
-}
-
-.buttons{
-
-    margin-top:35px;
-
-    display:flex;
-
-    gap:20px;
-
-    flex-wrap:wrap;
-}
-
-.btn{
-
-    padding:16px 30px;
-
-    border:none;
-
-    border-radius:16px;
-
-    cursor:pointer;
-
-    font-size:17px;
-
-    font-weight:bold;
-
-    transition:0.3s;
-}
-
-.btn-primary{
-
-    background:#00ffaa;
-
-    color:black;
-
-    box-shadow:0 0 25px #00ffaa;
-}
-
-.btn-primary:hover{
-
-    transform:translateY(-4px);
-}
-
-.btn-secondary{
-
-    background:
-    rgba(255,255,255,0.06);
-
-    border:
-    1px solid rgba(0,255,255,0.2);
-
-    color:white;
-}
-
-.dashboard{
-
-    flex:1;
-
-    min-width:320px;
-
-    display:flex;
-
-    justify-content:center;
-}
-
-.dashboard-card{
-
-    width:100%;
-
-    max-width:620px;
-
-    background:
-    rgba(255,255,255,0.05);
-
-    border:
-    1px solid rgba(0,255,255,0.18);
-
-    border-radius:28px;
-
-    padding:30px;
-
-    backdrop-filter:blur(14px);
-
-    box-shadow:
-    0 0 40px rgba(0,255,255,0.15);
-}
-
-.status{
-
-    color:#00ff99;
-
-    font-weight:bold;
-
-    text-shadow:
-    0 0 12px #00ff99;
-}
-
-.speed{
-
-    text-align:center;
-
-    margin-top:40px;
-}
-
-.speed h2{
-
-    font-size:110px;
-
-    color:#00ffff;
-
-    text-shadow:0 0 30px cyan;
-}
-
-.speed span{
-
-    color:#7ecfff;
-}
-
-.gauges{
-
-    margin-top:40px;
-
-    display:grid;
-
-    grid-template-columns:
-    repeat(2,1fr);
-
-    gap:20px;
-}
-
-.gauge{
-
-    background:
-    rgba(255,255,255,0.04);
-
-    border:
-    1px solid rgba(0,255,255,0.12);
-
-    border-radius:18px;
-
-    padding:22px;
-
-    text-align:center;
-}
-
-.gauge h3{
-
-    color:#9edfff;
-
-    margin-bottom:10px;
-}
-
-.gauge p{
-
-    font-size:32px;
-
-    color:#00ffaa;
-}
-
-.features{
-
-    padding:90px 8%;
-}
-
-.section-title{
-
-    text-align:center;
-
-    font-size:42px;
-
-    color:#00ffff;
-
-    margin-bottom:60px;
-
-    text-shadow:0 0 20px cyan;
-}
-
-.grid{
-
-    display:grid;
-
-    grid-template-columns:
-    repeat(auto-fit,minmax(280px,1fr));
-
-    gap:30px;
-}
-
-.card{
-
-    background:
-    rgba(255,255,255,0.04);
-
-    border:
-    1px solid rgba(0,255,255,0.12);
-
-    border-radius:24px;
-
-    padding:30px;
-
-    transition:0.3s;
-}
-
-.card:hover{
-
-    transform:translateY(-8px);
-
-    box-shadow:
-    0 0 25px rgba(0,255,255,0.18);
-}
-
-.card h3{
-
-    margin-bottom:18px;
-
-    color:#00ffaa;
-
-    font-size:24px;
-}
-
-.card p{
-
-    color:#cce7ff;
-
-    line-height:1.7;
-}
-
-.footer{
-
-    text-align:center;
-
-    padding:60px 20px;
-
-    border-top:
-    1px solid rgba(255,255,255,0.08);
-
-    color:#7faecc;
-}
-
-.footer h2{
-
-    color:#00ffff;
-
-    margin-bottom:15px;
-}
-
-@media(max-width:900px){
-
-.hero-left h1{
-
-    font-size:52px;
-}
-
-.speed h2{
-
-    font-size:80px;
-}
-
-}
-
-</style>
-
-</head>
-
-<body>
-
-<header>
-
-<div class='logo'>
-APEXDASH AI
-</div>
-
-</header>
-
-<section class='hero'>
-
-<div class='hero-left'>
-
-<h1>
-Tu vehículo ahora tiene copiloto.
-</h1>
-
-<p>
-
-ApexDash convierte cualquier automóvil compatible con OBD2 en un sistema inteligente con diagnóstico en tiempo real, navegación avanzada y comandos por voz futuristas.
-
-</p>
-
-<div class='buttons'>
-
-<button class='btn btn-primary'>
-🚀 Descargar Beta
-</button>
-
-<button class='btn btn-secondary'>
-🔧 Compatible con OBD2
-</button>
-
-</div>
-
-</div>
-
-<div class='dashboard'>
-
-<div class='dashboard-card'>
-
-<div class='status'>
-● DASH ONLINE
-</div>
-
-<div class='speed'>
-
-<h2>128</h2>
-
-<span>KM/H</span>
-
-</div>
-
-<div class='gauges'>
-
-<div class='gauge'>
-<h3>RPM</h3>
-<p>3450</p>
-</div>
-
-<div class='gauge'>
-<h3>TEMP</h3>
-<p>91°C</p>
-</div>
-
-<div class='gauge'>
-<h3>VOLT</h3>
-<p>13.8V</p>
-</div>
-
-<div class='gauge'>
-<h3>OBD</h3>
-<p>OK</p>
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-</section>
-
-<section class='features'>
-
-<h2 class='section-title'>
-Funciones Inteligentes
-</h2>
-
-<div class='grid'>
-
-<div class='card'>
-<h3>🔧 Escáner OBD2</h3>
-<p>
-Diagnóstico en tiempo real con RPM, temperatura, voltaje y lectura de códigos DTC.
-</p>
-</div>
-
-<div class='card'>
-<h3>🎤 Control por voz</h3>
-<p>
-Habla con Dash para navegar, abrir apps y controlar funciones mientras manejas.
-</p>
-</div>
-
-<div class='card'>
-<h3>📍 Navegación Inteligente</h3>
-<p>
-Encuentra gasolineras, talleres, restaurantes y estacionamientos cercanos.
-</p>
-</div>
-
-<div class='card'>
-<h3>📩 WhatsApp Inteligente</h3>
-<p>
-Lee mensajes y responde usando voz sin distraerte del camino.
-</p>
-</div>
-
-<div class='card'>
-<h3>🚗 Copiloto DASH</h3>
-<p>
-Asistencia inspirada en copilotos futuristas con personalidad propia.
-</p>
-</div>
-
-<div class='card'>
-<h3>⚡ Optimizado</h3>
-<p>
-Compatible incluso con teléfonos modestos de 2GB RAM.
-</p>
-</div>
-
-</div>
-
-</section>
-
-
-
-<section class='features'>
-
-<h2 class='section-title'>
-El origen de ApexDash
-</h2>
-
-<div class='grid'>
-
-<div class='card' style='grid-column:1/-1;text-align:center;'>
-
-<h3>
-🚗 Inspirado en un clásico de los 90
-</h3>
-
-<p style='max-width:900px;margin:auto;'>
-
-ApexDash nació con una idea simple:
-demostrar que un automóvil de los 90 todavía puede sentirse futurista.
-
-El proyecto fue inspirado por un vehículo de 1996 equipado con OBD2,
-demostrando que incluso los coches clásicos pueden seguir evolucionando con tecnología moderna.
-
-Porque un carro viejo no tiene por qué sentirse viejo.
-
-</p>
-
-<br>
-
-<img src='/static/carro.png'
-style='width:100%;max-width:750px;border-radius:24px;
-box-shadow:0 0 35px rgba(0,255,255,0.35);
-border:1px solid rgba(0,255,255,0.2);'>
-
-<br><br>
-
-<p style='color:#7ecfff;'>
-
-La visión de ApexDash es llevar funciones inteligentes y copilotos futuristas
-a vehículos reales que todavía siguen rodando todos los días.
-
-</p>
-
-</div>
-
-</div>
-
-</section>
-
-
-<div class='footer'>
-
-<h2>
-APEXDASH AI
-</h2>
-
-<p>
-Más que un escáner OBD2. Un verdadero copiloto inteligente.
-</p>
-
-</div>
-
-</body>
-
-</html>
-
-"""
+    return "ApexDash AI Online"
 
 # =====================================
 # 🚀 RUN
