@@ -1,77 +1,808 @@
 <!DOCTYPE html>
+<html lang="es">
 
-            </div>
+<head>
 
-        </div>
+<meta charset="UTF-8">
 
-        <div class="hero-image">
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
 
-            <img src="carro.png">
+<title>ApexDash AI</title>
 
-        </div>
+<link rel="preconnect"
+href="https://fonts.googleapis.com">
 
-    </div>
+<link rel="preconnect"
+href="https://fonts.gstatic.com"
+crossorigin>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800&display=swap"
+rel="stylesheet">
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+}
+
+body{
+
+background:#050816;
+color:white;
+font-family:'Orbitron',sans-serif;
+overflow-x:hidden;
+
+}
+
+.hero{
+
+min-height:100vh;
+
+background:
+linear-gradient(
+rgba(0,0,0,.75),
+rgba(0,0,0,.85)
+),
+
+url('carro.png');
+
+background-size:cover;
+background-position:center;
+
+display:flex;
+align-items:center;
+justify-content:center;
+
+padding:40px;
+
+}
+
+.hero-content{
+
+width:100%;
+max-width:1300px;
+
+display:grid;
+
+grid-template-columns:
+1fr 1fr;
+
+gap:60px;
+
+align-items:center;
+
+}
+
+.logo{
+
+width:120px;
+
+margin-bottom:20px;
+
+border-radius:20px;
+
+box-shadow:
+0 0 30px rgba(0,255,255,.3);
+
+}
+
+h1{
+
+font-size:88px;
+
+line-height:1;
+
+margin-bottom:20px;
+
+font-weight:800;
+
+}
+
+.white{
+color:white;
+}
+
+.red{
+color:#ff3131;
+}
+
+.subtitle{
+
+font-size:30px;
+
+margin-bottom:25px;
+
+color:#d8d8d8;
+
+}
+
+.desc{
+
+font-size:20px;
+
+line-height:1.8;
+
+color:#aab4c8;
+
+max-width:700px;
+
+}
+
+.buttons{
+
+margin-top:40px;
+
+display:flex;
+
+gap:20px;
+
+flex-wrap:wrap;
+
+}
+
+.btn{
+
+padding:18px 34px;
+
+border-radius:18px;
+
+text-decoration:none;
+
+font-weight:700;
+
+transition:.3s;
+
+display:inline-block;
+
+font-size:18px;
+
+}
+
+.btn-primary{
+
+background:#ff3131;
+
+color:white;
+
+box-shadow:
+0 0 25px rgba(255,49,49,.45);
+
+}
+
+.btn-primary:hover{
+
+transform:translateY(-3px);
+
+}
+
+.btn-secondary{
+
+border:2px solid rgba(255,255,255,.2);
+
+color:white;
+
+background:rgba(255,255,255,.05);
+
+}
+
+.hero-image img{
+
+width:100%;
+
+border-radius:35px;
+
+box-shadow:
+0 0 60px rgba(0,255,255,.15);
+
+}
+
+.section{
+
+padding:100px 40px;
+
+max-width:1300px;
+
+margin:auto;
+
+}
+
+.section-title{
+
+font-size:54px;
+
+margin-bottom:20px;
+
+text-align:center;
+
+}
+
+.section-sub{
+
+text-align:center;
+
+color:#b6bfd3;
+
+max-width:900px;
+
+margin:0 auto 70px;
+
+font-size:20px;
+
+line-height:1.8;
+
+}
+
+.cards{
+
+display:grid;
+
+grid-template-columns:
+repeat(auto-fit,minmax(260px,1fr));
+
+gap:30px;
+
+}
+
+.card{
+
+background:rgba(255,255,255,.04);
+
+border:1px solid rgba(255,255,255,.08);
+
+border-radius:28px;
+
+padding:40px;
+
+}
+
+.card-icon{
+
+font-size:50px;
+
+margin-bottom:20px;
+
+}
+
+.card h3{
+
+font-size:28px;
+
+margin-bottom:18px;
+
+}
+
+.card p{
+
+color:#b8c1d6;
+
+line-height:1.8;
+
+font-size:17px;
+
+}
+
+.story-wrap{
+
+display:grid;
+
+grid-template-columns:
+1fr 1fr;
+
+gap:60px;
+
+align-items:center;
+
+}
+
+.story img{
+
+width:100%;
+
+border-radius:30px;
+
+}
+
+.story h2{
+
+font-size:48px;
+
+margin-bottom:25px;
+
+}
+
+.story p{
+
+color:#bcc6d9;
+
+line-height:1.9;
+
+margin-bottom:20px;
+
+font-size:18px;
+
+}
+
+.chat-box{
+
+margin-top:80px;
+
+background:
+rgba(255,255,255,.04);
+
+border-radius:30px;
+
+padding:40px;
+
+border:1px solid rgba(255,255,255,.08);
+
+}
+
+.chat-title{
+
+font-size:40px;
+
+margin-bottom:20px;
+
+}
+
+.chat-messages{
+
+background:#02040d;
+
+border-radius:20px;
+
+min-height:250px;
+
+padding:20px;
+
+margin-bottom:20px;
+
+}
+
+.message{
+
+margin-bottom:16px;
+
+line-height:1.8;
+
+}
+
+.user{
+color:#6ee7ff;
+}
+
+.dash{
+color:#ff7070;
+}
+
+.chat-input-wrap{
+
+display:flex;
+
+gap:15px;
+
+flex-wrap:wrap;
+
+}
+
+.chat-input{
+
+flex:1;
+
+min-width:250px;
+
+padding:18px;
+
+border-radius:18px;
+
+border:none;
+
+background:#0b1020;
+
+color:white;
+
+font-size:16px;
+
+outline:none;
+
+}
+
+.send-btn{
+
+background:#ff3131;
+
+color:white;
+
+border:none;
+
+padding:18px 28px;
+
+border-radius:18px;
+
+font-weight:700;
+
+cursor:pointer;
+
+}
+
+footer{
+
+text-align:center;
+
+padding:50px 20px;
+
+color:#7e889e;
+
+margin-top:80px;
+
+}
+
+@media(max-width:980px){
+
+.hero-content,
+.story-wrap{
+
+grid-template-columns:1fr;
+
+}
+
+h1{
+
+font-size:58px;
+
+}
+
+.subtitle{
+
+font-size:24px;
+
+}
+
+.section-title{
+
+font-size:42px;
+
+}
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<section class="hero">
+
+<div class="hero-content">
+
+<div>
+
+<img
+src="logo_1.png"
+class="logo"
+alt="ApexDash Logo">
+
+<h1>
+
+<span class="white">
+Apex
+</span>
+
+<span class="red">
+Dash
+</span>
+
+</h1>
+
+<div class="subtitle">
+
+Tu copiloto inteligente automotriz 🚗🤖🔥
+
+</div>
+
+<p class="desc">
+
+Diagnóstico OBD2,
+IA automotriz,
+historial de fallas,
+monitoreo en tiempo real
+y análisis pensado para vehículos clásicos y modernos.
+
+</p>
+
+<div class="buttons">
+
+<a href="#"
+class="btn btn-primary">
+
+Descargar Beta APK
+
+</a>
+
+<a href="#chat"
+class="btn btn-secondary">
+
+Hablar con Dash
+
+</a>
+
+</div>
+
+</div>
+
+<div class="hero-image">
+
+<img
+src="carro.png"
+alt="Chrysler Concorde">
+
+</div>
+
+</div>
 
 </section>
 
 <section class="section">
 
-    <h2 class="section-title">
-        Un scanner diferente
-    </h2>
+<h2 class="section-title">
 
-    <p class="section-sub">
-        ApexDash no solo lee códigos.
-        Intenta entender el vehículo contigo.
-    </p>
+Un scanner diferente
 
-    <div class="cards">
+</h2>
 
-        <div class="card">
-            <div class="card-icon">🤖</div>
-            <h3>IA Automotriz</h3>
-            <p>
-                Pregunta síntomas,
-                relaciona códigos
-                y ayuda a diagnosticar.
-            </p>
-        </div>
+<p class="section-sub">
 
-        <div class="card">
-            <div class="card-icon">🧠</div>
-            <h3>Memoria Técnica</h3>
-            <p>
-                Recuerda códigos,
-                síntomas y reparaciones.
-            </p>
-        </div>
+ApexDash no solo lee códigos.
+Intenta entender el vehículo contigo.
 
-        <div class="card">
-            <div class="card-icon">📱</div>
-            <h3>2GB RAM</h3>
-            <p>
-                Optimizado para
-                celulares modestos.
-            </p>
-        </div>
+</p>
 
-    </div>
+<div class="cards">
+
+<div class="card">
+
+<div class="card-icon">
+🤖
+</div>
+
+<h3>
+IA Automotriz
+</h3>
+
+<p>
+
+Pregunta síntomas,
+relaciona códigos
+y ayuda a diagnosticar.
+
+</p>
+
+</div>
+
+<div class="card">
+
+<div class="card-icon">
+🧠
+</div>
+
+<h3>
+Memoria Técnica
+</h3>
+
+<p>
+
+Recuerda códigos,
+síntomas y reparaciones.
+
+</p>
+
+</div>
+
+<div class="card">
+
+<div class="card-icon">
+📱
+</div>
+
+<h3>
+2GB RAM
+</h3>
+
+<p>
+
+Optimizado para celulares modestos.
+
+</p>
+
+</div>
+
+</div>
 
 </section>
 
 <section class="section story">
 
-    <div class="story-wrap">
+<div class="story-wrap">
 
-        <div>
+<div>
 
-            <h2>
-                El carro que inspiró ApexDash 🔥
-            </h2>
+<h2>
 
-            <p>
-                Todo comenzó intentando entender sensores,
-                transmisión y códigos OBD2 en un Chrysler clásico.
-            </p>
+El carro que inspiró ApexDash 🔥
 
-            <p>
+</h2>
+
+<p>
+
+Todo comenzó intentando entender sensores,
+transmisión y códigos OBD2
+en un Chrysler clásico.
+
+</p>
+
+<p>
+
+ApexDash nació para demostrar
+que incluso vehículos viejos
+pueden tener un copiloto inteligente moderno.
+
+</p>
+
+</div>
+
+<div>
+
+<img
+src="carro.png"
+alt="Proyecto Chrysler">
+
+</div>
+
+</div>
+
+</section>
+
+<section class="section"
+id="chat">
+
+<div class="chat-box">
+
+<h2 class="chat-title">
+
+Habla con Dash 🤖
+
+</h2>
+
+<div class="chat-messages"
+id="chatMessages">
+
+<div class="message dash">
+
+Dash:
+Hola.
+Cuéntame qué síntomas tiene el vehículo.
+
+</div>
+
+</div>
+
+<div class="chat-input-wrap">
+
+<input
+type="text"
+id="userInput"
+class="chat-input"
+placeholder="Describe el problema del vehículo...">
+
+<button
+class="send-btn"
+onclick="sendMessage()">
+
+Enviar
+
+</button>
+
+</div>
+
+</div>
+
+</section>
+
+<footer>
+
+ApexDash AI • Copiloto Automotriz Inteligente 🚗🔥
+
+</footer>
+
+<script>
+
+async function sendMessage(){
+
+const input =
+document.getElementById(
+'userInput'
+);
+
+const chat =
+document.getElementById(
+'chatMessages'
+);
+
+const text =
+input.value.trim();
+
+if(text === '') return;
+
+chat.innerHTML += `
+
+<div class="message user">
+
+Tú: ${text}
+
+</div>
+
+`;
+
+input.value = '';
+
+try{
+
+const response =
+await fetch('/chat',{
+
+method:'POST',
+
+headers:{
+'Content-Type':
+'application/json'
+},
+
+body:JSON.stringify({
+
+message:text
+
+})
+
+});
+
+const data =
+await response.json();
+
+chat.innerHTML += `
+
+<div class="message dash">
+
+Dash: ${data.response}
+
+</div>
+
+`;
+
+chat.scrollTop =
+chat.scrollHeight;
+
+}catch(e){
+
+chat.innerHTML += `
+
+<div class="message dash">
+
+Dash: Error conectando IA.
+
+</div>
+
+`;
+
+}
+
+}
+
+</script>
+
+</body>
+
+</html>
