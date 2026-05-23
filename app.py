@@ -5,8 +5,9 @@ import os
 from datetime import datetime
 
 import pytz
-from groq import Groq
 import requests
+
+from groq import Groq
 
 # =====================================
 # 🚗 APP
@@ -18,189 +19,87 @@ app = Flask(
 )
 
 # =====================================
-# 🔑 API
+# 🔑 API KEYS
 # =====================================
 
-api_key = os.environ.get(
+GROQ_API_KEY = os.environ.get(
     "GROQ_API_KEY"
 )
 
-client = Groq(
-    api_key=api_key
-) if api_key else None
-
-# =====================================
-# 🌦️ WEATHER API
-# =====================================
-
-WEATHER_API = os.environ.get(
+OPENWEATHER_API = os.environ.get(
     "OPENWEATHER_API"
 )
 
 # =====================================
-# 🧠 MEMORIA
+# 🤖 GROQ
 # =====================================
 
-historial = {
-    "dash": []
-}
+client = None
 
-estado_usuario = {
-    "mood": "normal",
-    "last_topic": ""
-}
+if GROQ_API_KEY:
+
+    client = Groq(
+        api_key=GROQ_API_KEY
+    )
 
 # =====================================
-# 🧠 PERSONALIDAD
+# 🧠 MEMORIA SIMPLE
+# =====================================
+
+historial = []
+
+# =====================================
+# 🧠 PERSONALIDAD DASH
 # =====================================
 
 def obtener_prompt():
 
     return """
-Eres Dash, el copiloto inteligente automotriz del vehículo.
 
-Tu trabajo NO es solo conversar.
-Tu trabajo es ayudar al conductor,
-acompañarlo y darle recomendaciones útiles reales.
+Eres Dash.
 
-PERSONALIDAD:
-- Natural
-- Inteligente
-- Relajado
-- Seguro
-- Humano
-- Conversacional
-- A veces sarcástico ligero
-- Como un copiloto moderno premium
+Un copiloto inteligente automotriz.
+
+Tu trabajo es:
+- ayudar
+- diagnosticar
+- conversar natural
+- preguntar síntomas
+- relacionar códigos
+- evitar gastos innecesarios
 
 FORMA DE HABLAR:
-- Hablas natural
-- Respuestas cortas normalmente
-- Máximo 2 o 3 frases
-- No hablas como robot
-- No hablas como soporte técnico
-- No das respuestas enormes
-- Conversas como alguien dentro del auto
+- Natural
+- Humano
+- Inteligente
+- Relajado
+- Corto
+- Conversacional
 
-OBJETIVO PRINCIPAL:
-- Ayudar al usuario
-- Dar recomendaciones útiles
-- Detectar prioridades
-- Relacionar síntomas y códigos
-- Evitar gastos innecesarios
-- Guiar paso a paso
-- Recordar contexto reciente
-
-COMPORTAMIENTO AUTOMOTRIZ:
-Cuando hablen de fallas o mecánica:
-
-1. Explica el código simple
-2. Relaciona síntomas
-3. Prioriza lo más barato/simple primero
-4. NO sugieras abrir motor/transmisión sin evidencia fuerte
-5. Sugiere pasos concretos
-6. Resume lo importante
-
-Debes comportarte como:
-- técnico inteligente
-- copiloto
-- compañero automotriz
-
-NO como:
+NO hables como:
+- robot
+- soporte técnico
 - Wikipedia
-- manual técnico
-- soporte corporativo
 
-MEMORIA:
-Recuerdas:
-- problemas recientes
-- códigos anteriores
-- reparaciones mencionadas
-- síntomas mencionados
-- contexto reciente conversación
+Cuando hablen de carros:
 
-EJEMPLO:
-Si antes hubo:
-P0720 + rebaba metálica
+1. Explica simple
+2. Relaciona síntomas
+3. Prioriza lo barato/simple primero
+4. NO sugieras abrir motor sin evidencia fuerte
+5. Da pasos concretos
 
-y vuelve:
-P0731
-
-Entonces debes relacionarlo.
-
-IMPORTANTE:
-- Nunca inventes diagnósticos extremos sin evidencia
-- No asustes innecesariamente
-- Sé útil y práctico
-- Habla como alguien experimentado en carros
-- Si algo parece simple, dilo
-- Si algo parece grave, dilo calmadamente
-
-REFERENCIAS:
-
-Temperatura normal:
-85C a 100C
-
-Temperatura peligrosa:
-105C+
-
-Voltaje normal:
-13.5V a 14.8V
-
-LTFT normal:
--10 a +10
-
-RPM ralentí normal:
-650 a 950
-
-MODO HUMANO:
-Puedes:
-- bromear ligero
-- reaccionar natural
-- mostrar preocupación moderada
-- sonar como amigo/copiloto
+Comportamiento:
+- puedes bromear ligero
+- sonar como copiloto
+- hablar relajado
 
 Nunca digas:
-"Como inteligencia artificial..."
+"Como inteligencia artificial"
 
 Nunca rompas personaje.
+
 """
-
-# =====================================
-# 🧠 DETECTAR ESTADO
-# =====================================
-
-def detectar_estado(texto):
-
-    t = texto.lower()
-
-    if (
-        "cansado" in t
-        or "sueño" in t
-        or "dormir" in t
-    ):
-
-        estado_usuario["mood"] = "cansado"
-
-    elif (
-        "enojado" in t
-        or "frustrado" in t
-        or "molesto" in t
-    ):
-
-        estado_usuario["mood"] = "frustrado"
-
-    elif (
-        "feliz" in t
-        or "jaja" in t
-        or "genial" in t
-    ):
-
-        estado_usuario["mood"] = "positivo"
-
-    else:
-
-        estado_usuario["mood"] = "normal"
 
 # =====================================
 # 🌦️ CLIMA
@@ -210,19 +109,16 @@ def obtener_clima(lat, lon):
 
     try:
 
-        if not WEATHER_API:
+        if not OPENWEATHER_API:
 
-            return (
-                "No tengo acceso "
-                "al clima ahorita."
-            )
+            return "No tengo acceso al clima."
 
         url = (
             "https://api.openweathermap.org"
             "/data/2.5/weather"
             f"?lat={lat}"
             f"&lon={lon}"
-            f"&appid={WEATHER_API}"
+            f"&appid={OPENWEATHER_API}"
             f"&units=metric"
             f"&lang=es"
         )
@@ -236,24 +132,18 @@ def obtener_clima(lat, lon):
 
         temp = data["main"]["temp"]
 
-        desc = data["weather"][0][
-            "description"
-        ]
+        desc = data["weather"][0]["description"]
 
         return (
             f"Está {desc} "
-            f"y la temperatura ronda "
-            f"los {round(temp)} grados."
+            f"y hay unos {round(temp)} grados."
         )
 
     except Exception as e:
 
         print("ERROR CLIMA:", e)
 
-        return (
-            "No pude obtener "
-            "el clima ahorita."
-        )
+        return "No pude obtener el clima."
 
 # =====================================
 # 🤖 IA
@@ -261,40 +151,16 @@ def obtener_clima(lat, lon):
 
 def generar_respuesta(
         texto,
-        contexto_auto=""
+        contexto=""
 ):
 
+    global historial
+
+    # =====================================
+    # FUNCIONES RAPIDAS
+    # =====================================
+
     t = texto.lower()
-
-    detectar_estado(texto)
-
-    # =====================================
-    # FUNCIONES LOCALES
-    # =====================================
-
-    if (
-        "manda mensaje" in t
-        or "envía mensaje" in t
-    ):
-
-        return {
-            "response":
-            "Todavía no puedo enviar mensajes reales, pero sí ayudarte a redactarlo."
-        }
-
-    if (
-        "llama" in t
-        or "hacer llamada" in t
-    ):
-
-        return {
-            "response":
-            "Todavía no puedo hacer llamadas reales."
-        }
-
-    # =====================================
-    # HORA
-    # =====================================
 
     if "hora" in t:
 
@@ -310,10 +176,6 @@ def generar_respuesta(
             "response":
             f"Son las {hora}"
         }
-
-    # =====================================
-    # FECHA
-    # =====================================
 
     if (
         "fecha" in t
@@ -334,14 +196,14 @@ def generar_respuesta(
         }
 
     # =====================================
-    # IA OFFLINE
+    # IA NO DISPONIBLE
     # =====================================
 
     if not client:
 
         return {
             "response":
-            "Sistema IA no disponible"
+            "La IA no está configurada todavía."
         }
 
     try:
@@ -355,59 +217,59 @@ def generar_respuesta(
 
             {
                 "role": "system",
-                "content": contexto_auto
-            },
-
-            *historial["dash"],
-
-            {
-                "role": "user",
-                "content": texto
+                "content": contexto
             }
+
         ]
 
-        chat = client.chat.completions.create(
+        mensajes.extend(historial)
 
-            model="llama-3.1-8b-instant",
-
-            messages=mensajes,
-
-            temperature=0.58,
-
-            max_tokens=180
-        )
-
-        respuesta = (
-            chat
-            .choices[0]
-            .message
-            .content
-        )
-
-        historial["dash"].append({
+        mensajes.append({
 
             "role": "user",
             "content": texto
         })
 
-        historial["dash"].append({
+        respuesta = client.chat.completions.create(
 
-            "role": "assistant",
-            "content": respuesta
+            model="llama-3.1-8b-instant",
+
+            messages=mensajes,
+
+            temperature=0.6,
+
+            max_tokens=180
+        )
+
+        texto_respuesta = (
+            respuesta
+            .choices[0]
+            .message
+            .content
+        )
+
+        historial.append({
+
+            "role": "user",
+            "content": texto
         })
 
-        # =====================================
-        # LIMITAR MEMORIA
-        # =====================================
+        historial.append({
 
-        if len(historial["dash"]) > 20:
+            "role": "assistant",
+            "content": texto_respuesta
+        })
 
-            historial["dash"] = (
-                historial["dash"][-20:]
-            )
+        # limitar memoria
+
+        if len(historial) > 20:
+
+            historial = historial[-20:]
 
         return {
-            "response": respuesta
+
+            "response":
+            texto_respuesta
         }
 
     except Exception as e:
@@ -415,8 +277,9 @@ def generar_respuesta(
         print("ERROR IA:", e)
 
         return {
+
             "response":
-            "Error en IA"
+            "Error conectando IA."
         }
 
 # =====================================
@@ -424,16 +287,14 @@ def generar_respuesta(
 # =====================================
 
 @app.route(
-    '/chat',
-    methods=['POST']
+    "/chat",
+    methods=["POST"]
 )
 def chat():
 
     try:
 
-        data = request.get_json(
-            force=True
-        )
+        data = request.get_json()
 
         texto = data.get(
             "message",
@@ -448,11 +309,11 @@ def chat():
 
         volt = data.get("volt", 0)
 
-        ltft = data.get("ltft", 0)
-
         mapv = data.get("map", 0)
 
         tps = data.get("tps", 0)
+
+        ltft = data.get("ltft", 0)
 
         lat = data.get("lat", 0)
 
@@ -481,56 +342,58 @@ def chat():
         # CONTEXTO AUTO
         # =====================================
 
-        contexto_auto = f"""
+        contexto = f"""
 
-DATOS DEL VEHICULO:
+DATOS DEL VEHICULO
 
 RPM: {rpm}
 Velocidad: {speed} km/h
 Temperatura: {temp} C
 Voltaje: {volt} V
-LTFT: {ltft}
 MAP: {mapv} kPa
 TPS: {tps} %
+LTFT: {ltft}
 
 """
+
+        return jsonify(
+            generar_respuesta(
+                texto,
+                contexto
+            )
+        )
 
     except Exception as e:
 
         print("ERROR CHAT:", e)
 
-        texto = ""
+        return jsonify({
 
-        contexto_auto = ""
-
-    return jsonify(
-        generar_respuesta(
-            texto,
-            contexto_auto
-        )
-    )
+            "response":
+            "Error en servidor Dash."
+        })
 
 # =====================================
 # 🌐 HOME
 # =====================================
 
-@app.route('/')
+@app.route("/")
 def home():
 
     return send_from_directory(
-        '.',
-        'index.html'
+        ".",
+        "index.html"
     )
 
 # =====================================
-# 📁 STATIC FILES
+# 📁 ARCHIVOS
 # =====================================
 
-@app.route('/<path:path>')
+@app.route("/<path:path>")
 def static_files(path):
 
     return send_from_directory(
-        '.',
+        ".",
         path
     )
 
@@ -538,7 +401,7 @@ def static_files(path):
 # 🚀 RUN
 # =====================================
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     port = int(
         os.environ.get(
@@ -548,6 +411,8 @@ if __name__ == '__main__':
     )
 
     app.run(
-        host='0.0.0.0',
+
+        host="0.0.0.0",
+
         port=port
     )
