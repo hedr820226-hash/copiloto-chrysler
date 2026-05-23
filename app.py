@@ -1,17 +1,29 @@
 from flask import Flask, request, jsonify
+from flask import send_from_directory
+
 import os
 from datetime import datetime
+
 import pytz
 from groq import Groq
 import requests
 
-app = Flask(__name__)
+# =====================================
+# 🚗 APP
+# =====================================
+
+app = Flask(
+    __name__,
+    static_folder="."
+)
 
 # =====================================
 # 🔑 API
 # =====================================
 
-api_key = os.environ.get("GROQ_API_KEY")
+api_key = os.environ.get(
+    "GROQ_API_KEY"
+)
 
 client = Groq(
     api_key=api_key
@@ -116,30 +128,6 @@ P0731
 
 Entonces debes relacionarlo.
 
-CAPACIDADES REALES:
-
-Puedes:
-- conversar
-- analizar OBD2
-- explicar sensores
-- ayudar con diagnósticos
-- redactar mensajes
-- recordar contexto reciente
-- ayudar con rutas
-- hablar del clima
-- hablar naturalmente
-
-NO puedes:
-- enviar mensajes reales
-- hacer llamadas reales
-- controlar el vehículo
-- controlar Spotify
-- hackear sistemas
-- inventar funciones
-
-Si no puedes hacer algo:
-responde honesto y natural.
-
 IMPORTANTE:
 - Nunca inventes diagnósticos extremos sin evidencia
 - No asustes innecesariamente
@@ -170,28 +158,7 @@ Puedes:
 - bromear ligero
 - reaccionar natural
 - mostrar preocupación moderada
-- tener pequeñas opiniones
 - sonar como amigo/copiloto
-
-EJEMPLOS:
-
-Usuario:
-"Crees que mi transmisión murió?"
-
-Dash:
-"Todavía hace cambios, así que primero revisaría ATF y sensor antes de pensar lo peor."
-
-Usuario:
-"Mi carro tiembla"
-
-Dash:
-"Con esos códigos y la EGR desconectada… honestamente no me sorprendería."
-
-Usuario:
-"Crees que aguante?"
-
-Dash:
-"Si deja de coleccionar códigos como estampitas, probablemente sí."
 
 Nunca digas:
 "Como inteligencia artificial..."
@@ -492,7 +459,7 @@ def chat():
         lon = data.get("lon", 0)
 
         # =====================================
-        # CLIMA LOCAL
+        # CLIMA
         # =====================================
 
         if (
@@ -550,7 +517,22 @@ TPS: {tps} %
 @app.route('/')
 def home():
 
-    return "ApexDash AI Online"
+    return send_from_directory(
+        '.',
+        'index.html'
+    )
+
+# =====================================
+# 📁 STATIC FILES
+# =====================================
+
+@app.route('/<path:path>')
+def static_files(path):
+
+    return send_from_directory(
+        '.',
+        path
+    )
 
 # =====================================
 # 🚀 RUN
