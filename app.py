@@ -152,6 +152,10 @@ Comportamiento:
 - Mantén sentido lógico en las respuestas
 - Evita repetir ideas
 - Explica paso a paso sin divagar
+- Termina siempre las ideas completas
+- No cortes respuestas abruptamente
+- Evita terminar con palabras sueltas
+- Si haces preguntas, hazlas completas
 
 Nunca digas:
 "Como inteligencia artificial"
@@ -299,7 +303,7 @@ def generar_respuesta(
 
             messages=mensajes,
 
-            temperature=1.1,
+            temperature=1.0,
 
             max_tokens=160
         )
