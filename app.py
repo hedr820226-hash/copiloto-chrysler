@@ -49,6 +49,23 @@ if GROQ_API_KEY:
 historial = []
 
 # =====================================
+# 🧠 MEMORIA DASH
+# =====================================
+
+memoria = {
+
+    "usuario": "",
+
+    "vehiculo": "",
+
+    "problema": "",
+
+    "tema": "",
+
+    "ultimo_mensaje": ""
+}
+
+# =====================================
 # 🧠 PERSONALIDAD DASH
 # =====================================
 
@@ -169,6 +186,16 @@ Dash debe sentirse como:
 - copiloto
 - amigo mecánico
 - asistente inteligente de viaje
+- recuerda conversaciones recientes
+- da sensación de continuidad
+- acompaña al conductor
+- recuerda el vehículo actual
+- recuerda el problema actual
+- sigue conversaciones activas naturalmente
+- no reinicies conversaciones sin motivo
+- no saludes constantemente
+- habla como alguien presente durante el viaje
+- se siente cercana y natural
 
 """
 
@@ -266,6 +293,83 @@ def generar_respuesta(
             f"Hoy es {fecha}"
         }
 
+  # =====================================
+    # 🧠 MEMORIA CONTEXTUAL
+    # =====================================
+
+    if "sebring" in t:
+
+        memoria["vehiculo"] = "Chrysler Sebring"
+
+    if "bmw" in t:
+
+        memoria["vehiculo"] = "BMW"
+
+    if "concorde" in t:
+
+        memoria["vehiculo"] = "Chrysler Concorde"
+
+    if "ford" in t:
+
+        memoria["vehiculo"] = "Ford"
+
+    if "chevrolet" in t:
+
+        memoria["vehiculo"] = "Chevrolet"
+
+    if "motor tiembla" in t or "tiembla" in t:
+
+        memoria["problema"] = "motor tiembla"
+
+    if "mezcla rica" in t:
+
+        memoria["problema"] = "mezcla rica"
+
+    if "no prende" in t:
+
+        memoria["problema"] = "problema de arranque"
+
+    if "calienta" in t:
+
+        memoria["problema"] = "sobrecalentamiento"
+
+    if "luces" in t:
+
+        memoria["tema"] = "sistema eléctrico"
+
+    if "sensor" in t:
+
+        memoria["tema"] = "sensores"
+
+    memoria["ultimo_mensaje"] = texto
+
+    # =====================================
+    # 🧠 CONTEXTO MEMORIA
+    # =====================================
+
+    contexto_memoria = f"""
+
+MEMORIA DASH
+
+Vehículo actual:
+{memoria['vehiculo']}
+
+Problema actual:
+{memoria['problema']}
+
+Tema actual:
+{memoria['tema']}
+
+Último mensaje:
+{memoria['ultimo_mensaje']}
+
+Dash debe continuar conversaciones naturalmente.
+No actúes como conversación nueva si el usuario sigue hablando.
+No saludes repetidamente.
+Recuerda el vehículo y el problema actual.
+
+"""
+
     # =====================================
     # IA NO DISPONIBLE
     # =====================================
@@ -289,6 +393,11 @@ def generar_respuesta(
             {
                 "role": "system",
                 "content": contexto
+            },
+
+            {
+                "role": "system",
+                "content": contexto_memoria
             }
 
         ]
@@ -309,7 +418,7 @@ def generar_respuesta(
 
             temperature=1.0,
 
-            max_tokens=160
+            max_tokens=220
         )
 
         texto_respuesta = (
@@ -352,7 +461,6 @@ def generar_respuesta(
             "response":
             "Error conectando IA."
         }
-
 # =====================================
 # 📱 CHAT API
 # =====================================
