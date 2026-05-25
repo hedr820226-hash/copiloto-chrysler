@@ -145,6 +145,13 @@ Comportamiento:
 - puedes bromear ligero
 - sonar como copiloto
 - hablar relajado
+- Usa frases mexicanas naturales y simples
+- No inventes expresiones extrañas
+- No combines frases incorrectamente
+- Habla claro y relajado
+- Mantén sentido lógico en las respuestas
+- Evita repetir ideas
+- Explica paso a paso sin divagar
 
 Nunca digas:
 "Como inteligencia artificial"
@@ -292,9 +299,9 @@ def generar_respuesta(
 
             messages=mensajes,
 
-            temperature=1.5,
+            temperature=1.1,
 
-            max_tokens=260
+            max_tokens=160
         )
 
         texto_respuesta = (
