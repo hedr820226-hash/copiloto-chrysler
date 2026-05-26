@@ -278,7 +278,7 @@ def generar_respuesta(
 
     t = texto.lower()
 
-    if "hora" in t:
+    if "Que hora es" in t:
 
         tz = pytz.timezone(
             "America/Mexico_City"
@@ -290,7 +290,7 @@ def generar_respuesta(
 
         return {
             "response":
-            f"Son las {hora}"
+            f"Son la {hora}"
         }
 
     if (
@@ -436,7 +436,7 @@ Recuerda el vehículo y el problema actual.
 
             temperature=1.0,
 
-            max_tokens=220
+            max_tokens=700
         )
 
         texto_respuesta = (
