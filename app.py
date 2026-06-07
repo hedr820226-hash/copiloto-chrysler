@@ -6,7 +6,6 @@ from datetime import datetime
 
 import pytz
 import requests
-import json
 
 from groq import Groq
 
@@ -59,54 +58,12 @@ memoria = {
 
     "vehiculo": "",
 
-    "motor": "",
-
-    "combustible": "",
-
     "problema": "",
 
     "tema": "",
 
     "ultimo_mensaje": ""
-
 }
-
-def guardar_memoria():
-
-    with open(
-            "memoria.json",
-            "w",
-            encoding="utf-8"
-    ) as f:
-
-        json.dump(
-                memoria,
-                f,
-                ensure_ascii=False,
-                indent=4
-        )
-
-
-def cargar_memoria():
-
-    global memoria
-
-    try:
-
-        with open(
-                "memoria.json",
-                "r",
-                encoding="utf-8"
-        ) as f:
-
-            memoria = json.load(f)
-
-    except:
-
-        pass
-
-
-cargar_memoria()
 
 # =====================================
 # 🧠 PERSONALIDAD DASH
@@ -321,8 +278,6 @@ def generar_respuesta(
 
     t = texto.lower()
 
-
-
     if "Que hora es" in t:
 
         tz = pytz.timezone(
@@ -410,38 +365,26 @@ def generar_respuesta(
     # 🧠 CONTEXTO MEMORIA
     # =====================================
 
-  contexto_memoria = f"""
+    contexto_memoria = f"""
 
 MEMORIA DASH
 
-Usuario:
-{memoria['usuario']}
-
-Vehiculo:
+Vehículo actual:
 {memoria['vehiculo']}
 
-Motor:
-{memoria['motor']}
-
-Combustible:
-{memoria['combustible']}
-
-Problema:
+Problema actual:
 {memoria['problema']}
 
-Tema:
+Tema actual:
 {memoria['tema']}
 
-Ultimo mensaje:
+Último mensaje:
 {memoria['ultimo_mensaje']}
-
 
 Dash debe continuar conversaciones naturalmente.
 No actúes como conversación nueva si el usuario sigue hablando.
 No saludes repetidamente.
 Recuerda el vehículo y el problema actual.
-
-
 
 """
 
