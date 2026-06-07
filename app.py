@@ -318,46 +318,12 @@ def generar_respuesta(
     # =====================================
     # FUNCIONES RAPIDAS
     # =====================================
+
     t = texto.lower()
 
-    if "me llamo" in t:
 
-        nombre = (
-            t.replace(
-                "me llamo",
-                ""
-            ).strip()
-        )
 
-        memoria["usuario"] = nombre
-
-        guardar_memoria()
-
-    if "magna" in t:
-
-        memoria["combustible"] = "Magna"
-
-        guardar_memoria()
-
-    if "premium" in t:
-
-        memoria["combustible"] = "Premium"
-
-        guardar_memoria()
-
-    if "3.3" in t:
-
-        memoria["motor"] = "3.3L"
-
-        guardar_memoria()
-
-    if "3.5" in t:
-
-        memoria["motor"] = "3.5L"
-
-        guardar_memoria()
-
-    if "que hora es" in t:
+    if "Que hora es" in t:
 
         tz = pytz.timezone(
             "America/Mexico_City"
@@ -390,7 +356,7 @@ def generar_respuesta(
             f"Hoy es {fecha}"
         }
 
-    # =====================================
+  # =====================================
     # 🧠 MEMORIA CONTEXTUAL
     # =====================================
 
@@ -444,38 +410,40 @@ def generar_respuesta(
     # 🧠 CONTEXTO MEMORIA
     # =====================================
 
-    contexto_memoria = f"""
+  contexto_memoria = f"""
 
-    MEMORIA DASH
+MEMORIA DASH
 
-    Usuario:
-    {memoria['usuario']}
+Usuario:
+{memoria['usuario']}
 
-    Vehiculo:
-    {memoria['vehiculo']}
+Vehiculo:
+{memoria['vehiculo']}
 
-    Motor:
-    {memoria['motor']}
+Motor:
+{memoria['motor']}
 
-    Combustible:
-    {memoria['combustible']}
+Combustible:
+{memoria['combustible']}
 
-    Problema:
-    {memoria['problema']}
+Problema:
+{memoria['problema']}
 
-    Tema:
-    {memoria['tema']}
+Tema:
+{memoria['tema']}
 
-    Ultimo mensaje:
-    {memoria['ultimo_mensaje']}
+Ultimo mensaje:
+{memoria['ultimo_mensaje']}
 
 
-    Dash debe continuar conversaciones naturalmente.
-    No actúes como conversación nueva si el usuario sigue hablando.
-    No saludes repetidamente.
-    Recuerda el vehículo y el problema actual.
+Dash debe continuar conversaciones naturalmente.
+No actúes como conversación nueva si el usuario sigue hablando.
+No saludes repetidamente.
+Recuerda el vehículo y el problema actual.
 
-    """
+
+
+"""
 
     # =====================================
     # IA NO DISPONIBLE
@@ -549,7 +517,7 @@ def generar_respuesta(
 
         # limitar memoria
 
-        if len(historial) > 40:
+        if len(historial) > 20:
 
             historial = historial[-12:]
 
@@ -568,11 +536,11 @@ def generar_respuesta(
             "response":
             "Error conectando IA."
         }
-    # =====================================
-    # 📱 CHAT API
-    # =====================================
+# =====================================
+# 📱 CHAT API
+# =====================================
 
- @app.route(
+@app.route(
     "/chat",
     methods=["POST"]
 )
@@ -630,17 +598,17 @@ def chat():
 
         contexto = f"""
 
-        DATOS DEL VEHICULO
+DATOS DEL VEHICULO
 
-        RPM: {rpm}
-        Velocidad: {speed} km/h
-        Temperatura: {temp} C
-        Voltaje: {volt} V
-        MAP: {mapv} kPa
-        TPS: {tps} %
-        LTFT: {ltft}
+RPM: {rpm}
+Velocidad: {speed} km/h
+Temperatura: {temp} C
+Voltaje: {volt} V
+MAP: {mapv} kPa
+TPS: {tps} %
+LTFT: {ltft}
 
-        """
+"""
 
         return jsonify(
             generar_respuesta(
