@@ -6,6 +6,7 @@ from datetime import datetime
 
 import pytz
 import requests
+import json
 
 from groq import Groq
 
@@ -58,12 +59,54 @@ memoria = {
 
     "vehiculo": "",
 
+    "motor": "",
+
+    "combustible": "",
+
     "problema": "",
 
     "tema": "",
 
     "ultimo_mensaje": ""
+
 }
+
+def guardar_memoria():
+
+    with open(
+            "memoria.json",
+            "w",
+            encoding="utf-8"
+    ) as f:
+
+        json.dump(
+                memoria,
+                f,
+                ensure_ascii=False,
+                indent=4
+        )
+
+
+def cargar_memoria():
+
+    global memoria
+
+    try:
+
+        with open(
+                "memoria.json",
+                "r",
+                encoding="utf-8"
+        ) as f:
+
+            memoria = json.load(f)
+
+    except:
+
+        pass
+
+
+cargar_memoria()
 
 # =====================================
 # 🧠 PERSONALIDAD DASH
@@ -275,10 +318,46 @@ def generar_respuesta(
     # =====================================
     # FUNCIONES RAPIDAS
     # =====================================
-
     t = texto.lower()
 
-    if "Que hora es" in t:
+    if "me llamo" in t:
+
+        nombre = (
+            t.replace(
+                "me llamo",
+                ""
+            ).strip()
+        )
+
+        memoria["usuario"] = nombre
+
+        guardar_memoria()
+
+    if "magna" in t:
+
+        memoria["combustible"] = "Magna"
+
+        guardar_memoria()
+
+    if "premium" in t:
+
+        memoria["combustible"] = "Premium"
+
+        guardar_memoria()
+
+    if "3.3" in t:
+
+        memoria["motor"] = "3.3L"
+
+        guardar_memoria()
+
+    if "3.5" in t:
+
+        memoria["motor"] = "3.5L"
+
+        guardar_memoria()
+
+    if "que hora es" in t:
 
         tz = pytz.timezone(
             "America/Mexico_City"
@@ -311,7 +390,7 @@ def generar_respuesta(
             f"Hoy es {fecha}"
         }
 
-  # =====================================
+    # =====================================
     # 🧠 MEMORIA CONTEXTUAL
     # =====================================
 
@@ -367,26 +446,36 @@ def generar_respuesta(
 
     contexto_memoria = f"""
 
-MEMORIA DASH
+    MEMORIA DASH
 
-Vehículo actual:
-{memoria['vehiculo']}
+    Usuario:
+    {memoria['usuario']}
 
-Problema actual:
-{memoria['problema']}
+    Vehiculo:
+    {memoria['vehiculo']}
 
-Tema actual:
-{memoria['tema']}
+    Motor:
+    {memoria['motor']}
 
-Último mensaje:
-{memoria['ultimo_mensaje']}
+    Combustible:
+    {memoria['combustible']}
 
-Dash debe continuar conversaciones naturalmente.
-No actúes como conversación nueva si el usuario sigue hablando.
-No saludes repetidamente.
-Recuerda el vehículo y el problema actual.
+    Problema:
+    {memoria['problema']}
 
-"""
+    Tema:
+    {memoria['tema']}
+
+    Ultimo mensaje:
+    {memoria['ultimo_mensaje']}
+
+
+    Dash debe continuar conversaciones naturalmente.
+    No actúes como conversación nueva si el usuario sigue hablando.
+    No saludes repetidamente.
+    Recuerda el vehículo y el problema actual.
+
+    """
 
     # =====================================
     # IA NO DISPONIBLE
@@ -460,7 +549,7 @@ Recuerda el vehículo y el problema actual.
 
         # limitar memoria
 
-        if len(historial) > 20:
+        if len(historial) > 40:
 
             historial = historial[-12:]
 
@@ -479,15 +568,15 @@ Recuerda el vehículo y el problema actual.
             "response":
             "Error conectando IA."
         }
-# =====================================
-# 📱 CHAT API
-# =====================================
+    # =====================================
+    # 📱 CHAT API
+    # =====================================
 
-@app.route(
+    @app.route(
     "/chat",
     methods=["POST"]
-)
-def chat():
+    )
+    def chat():
 
     try:
 
@@ -541,17 +630,17 @@ def chat():
 
         contexto = f"""
 
-DATOS DEL VEHICULO
+        DATOS DEL VEHICULO
 
-RPM: {rpm}
-Velocidad: {speed} km/h
-Temperatura: {temp} C
-Voltaje: {volt} V
-MAP: {mapv} kPa
-TPS: {tps} %
-LTFT: {ltft}
+        RPM: {rpm}
+        Velocidad: {speed} km/h
+        Temperatura: {temp} C
+        Voltaje: {volt} V
+        MAP: {mapv} kPa
+        TPS: {tps} %
+        LTFT: {ltft}
 
-"""
+        """
 
         return jsonify(
             generar_respuesta(
