@@ -572,11 +572,11 @@ def generar_respuesta(
     # 📱 CHAT API
     # =====================================
 
-    @app.route(
+ @app.route(
     "/chat",
     methods=["POST"]
-    )
-    def chat():
+)
+def chat():
 
     try:
 
