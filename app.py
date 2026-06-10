@@ -277,8 +277,26 @@ def generar_respuesta(
     # =====================================
 
     t = texto.lower()
+    
 
-    if "Que hora es" in t:
+modo = "chat"
+
+if "cotizacion" in t:
+    modo = "cotizacion"
+
+elif "reporte" in t:
+    modo = "reporte"
+
+elif "correo" in t:
+    modo = "correo"
+
+elif "whatsapp" in t:
+    modo = "whatsapp"
+
+elif "excel" in t:
+    modo = "excel"
+
+    if "que hora es" in t:
 
         tz = pytz.timezone(
             "America/Mexico_City"
@@ -387,8 +405,7 @@ No saludes repetidamente.
 Recuerda el vehículo y el problema actual.
 
 """
-
-    # =====================================
+   # =====================================
     # IA NO DISPONIBLE
     # =====================================
 
@@ -399,6 +416,76 @@ Recuerda el vehículo y el problema actual.
             "La IA no está configurada todavía."
         }
 
+    # =====================================
+    # MODOS DOCUMENTO
+    # =====================================
+
+    prompt_usuario = texto
+
+    if modo == "cotizacion":
+
+        prompt_usuario = f"""
+Genera únicamente una cotización profesional.
+
+NO saludes.
+NO expliques.
+NO te despidas.
+
+Entrega solamente la cotización.
+
+Solicitud:
+{texto}
+"""
+
+    elif modo == "reporte":
+
+        prompt_usuario = f"""
+Genera únicamente un reporte profesional.
+
+NO saludes.
+NO expliques.
+
+Entrega solamente el reporte.
+
+Solicitud:
+{texto}
+"""
+
+    elif modo == "correo":
+
+        prompt_usuario = f"""
+Redacta únicamente el correo.
+
+Incluye asunto y cuerpo.
+
+No agregues comentarios fuera del correo.
+
+Solicitud:
+{texto}
+"""
+
+    elif modo == "whatsapp":
+
+        prompt_usuario = f"""
+Redacta únicamente el mensaje de WhatsApp.
+
+Sin explicaciones.
+
+Solicitud:
+{texto}
+"""
+
+    elif modo == "excel":
+
+        prompt_usuario = f"""
+Genera únicamente una tabla lista para Excel.
+
+Sin explicaciones.
+Sin saludos.
+
+Solicitud:
+{texto}
+"""
     try:
 
         mensajes = [
@@ -420,12 +507,13 @@ Recuerda el vehículo y el problema actual.
 
         ]
 
-        mensajes.extend(historial)
+     mensajes.extend(historial)
 
         mensajes.append({
 
             "role": "user",
-            "content": texto
+            "content": prompt_usuario
+
         })
 
         respuesta = client.chat.completions.create(
@@ -446,10 +534,11 @@ Recuerda el vehículo y el problema actual.
             .content
         )
 
-        historial.append({
+       historial.append({
 
             "role": "user",
-            "content": texto
+            "content": prompt_usuario
+
         })
 
         historial.append({
