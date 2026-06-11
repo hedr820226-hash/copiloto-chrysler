@@ -277,24 +277,36 @@ def generar_respuesta(
     # =====================================
 
     t = texto.lower()
-    
 
-modo = "chat"
+    # =====================================
+    # MODOS DOCUMENTO
+    # =====================================
 
-if "cotizacion" in t:
-    modo = "cotizacion"
+    modo = "chat"
 
-elif "reporte" in t:
-    modo = "reporte"
+    if "cotizacion" in t:
 
-elif "correo" in t:
-    modo = "correo"
+        modo = "cotizacion"
 
-elif "whatsapp" in t:
-    modo = "whatsapp"
+    elif "reporte" in t:
 
-elif "excel" in t:
-    modo = "excel"
+        modo = "reporte"
+
+    elif "correo" in t:
+
+        modo = "correo"
+
+    elif "whatsapp" in t:
+
+        modo = "whatsapp"
+
+    elif "excel" in t:
+
+        modo = "excel"
+
+    # =====================================
+    # FUNCIONES RAPIDAS
+    # =====================================
 
     if "que hora es" in t:
 
@@ -308,7 +320,7 @@ elif "excel" in t:
 
         return {
             "response":
-            f"Son la {hora}"
+            f"Son las {hora}"
         }
 
     if (
@@ -328,8 +340,7 @@ elif "excel" in t:
             "response":
             f"Hoy es {fecha}"
         }
-
-  # =====================================
+    # =====================================
     # 🧠 MEMORIA CONTEXTUAL
     # =====================================
 
@@ -405,7 +416,8 @@ No saludes repetidamente.
 Recuerda el vehículo y el problema actual.
 
 """
-   # =====================================
+
+    # =====================================
     # IA NO DISPONIBLE
     # =====================================
 
@@ -475,9 +487,9 @@ Solicitud:
 {texto}
 """
 
-    elif modo == "excel":
+  elif modo == "excel":
 
-        prompt_usuario = f"""
+    prompt_usuario = f"""
 Genera únicamente una tabla lista para Excel.
 
 Sin explicaciones.
@@ -486,6 +498,7 @@ Sin saludos.
 Solicitud:
 {texto}
 """
+
     try:
 
         mensajes = [
@@ -507,7 +520,9 @@ Solicitud:
 
         ]
 
-     mensajes.extend(historial)
+        mensajes.extend(
+            historial
+        )
 
         mensajes.append({
 
@@ -528,13 +543,15 @@ Solicitud:
         )
 
         texto_respuesta = (
+
             respuesta
             .choices[0]
             .message
             .content
+
         )
 
-       historial.append({
+        historial.append({
 
             "role": "user",
             "content": prompt_usuario
@@ -545,9 +562,8 @@ Solicitud:
 
             "role": "assistant",
             "content": texto_respuesta
-        })
 
-        # limitar memoria
+        })
 
         if len(historial) > 20:
 
