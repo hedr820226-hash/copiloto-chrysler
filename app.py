@@ -537,7 +537,7 @@ Solicitud:
 
             messages=mensajes,
 
-            temperature=1.0,
+            temperature=0.4,
 
             max_tokens=700
         )
@@ -565,9 +565,9 @@ Solicitud:
 
         })
 
-        if len(historial) > 20:
+        if len(historial) > 60:
 
-            historial = historial[-12:]
+            historial = historial[-40:]
 
         return {
 
