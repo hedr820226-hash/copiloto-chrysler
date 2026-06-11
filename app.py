@@ -69,7 +69,7 @@ memoria = {
 # 🧠 PERSONALIDAD DASH
 # =====================================
 
-def obtener_prompt():
+ def obtener_prompt():
 
     return """
 
