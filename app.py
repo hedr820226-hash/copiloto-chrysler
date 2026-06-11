@@ -487,9 +487,9 @@ Solicitud:
 {texto}
 """
 
-  elif modo == "excel":
+    elif modo == "excel":
 
-    prompt_usuario = f"""
+        prompt_usuario = f"""
 Genera únicamente una tabla lista para Excel.
 
 Sin explicaciones.
