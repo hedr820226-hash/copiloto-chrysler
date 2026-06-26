@@ -1,5 +1,8 @@
-flask
+Flask
 groq
 requests
 pytz
 gunicorn
+faster-whisper
+av
+ctranslate2
