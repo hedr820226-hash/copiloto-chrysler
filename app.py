@@ -560,16 +560,21 @@ Solicitud:
 
         })
 
-        respuesta = client.chat.completions.create(
+     MODEL = os.environ.get(
+    "GROQ_MODEL",
+    "openai/gpt-oss-20b"
+)
 
-            model="llama-3.1-8b-instant",
+respuesta = client.chat.completions.create(
 
-            messages=mensajes,
+    model=MODEL,
 
-            temperature=0.4,
+    messages=mensajes,
 
-            max_tokens=700
-        )
+    temperature=0.4,
+
+    max_tokens=700
+)
 
         texto_respuesta = (
 
