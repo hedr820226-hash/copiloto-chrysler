@@ -560,21 +560,21 @@ Solicitud:
 
         })
 
-     MODEL = os.environ.get(
-    "GROQ_MODEL",
-    "openai/gpt-oss-20b"
-)
+        MODEL = os.environ.get(
+        "GROQ_MODEL",
+        "openai/gpt-oss-20b"
+        )
 
-respuesta = client.chat.completions.create(
+        respuesta = client.chat.completions.create(
 
-    model=MODEL,
+        model=MODEL,
 
-    messages=mensajes,
+        messages=mensajes,
 
-    temperature=0.4,
+        temperature=0.4,
 
-    max_tokens=700
-)
+        max_tokens=700
+        )
 
         texto_respuesta = (
 
