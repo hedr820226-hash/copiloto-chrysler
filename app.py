@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 import os
 from groq import Groq
 
@@ -6,7 +6,7 @@ from groq import Groq
 # 🚗 APP
 # =====================================
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder=".")
 
 # =====================================
 # 🔑 CONFIGURACIÓN
@@ -75,13 +75,25 @@ def generar_respuesta(texto):
         "content": texto
     })
 
+    # Ajuste automático de tokens
+    longitud = len(texto)
+
+    if longitud < 30:
+        max_tokens = 80
+    elif longitud < 120:
+        max_tokens = 180
+    elif longitud < 300:
+        max_tokens = 350
+    else:
+        max_tokens = 600
+
     try:
 
         respuesta = client.chat.completions.create(
             model=MODEL,
             messages=mensajes,
             temperature=0.4,
-            max_tokens=250
+            max_tokens=max_tokens
         )
 
         texto_respuesta = respuesta.choices[0].message.content
@@ -96,6 +108,7 @@ def generar_respuesta(texto):
             "content": texto_respuesta
         })
 
+        # Solo conservar los últimos 3 turnos
         if len(historial) > 6:
             historial[:] = historial[-6:]
 
@@ -123,15 +136,12 @@ def chat():
     )
 
     if not mensaje:
-
         return jsonify({
             "response": "No recibí ningún mensaje."
         }), 400
 
-    respuesta = generar_respuesta(mensaje)
-
     return jsonify({
-        "response": respuesta
+        "response": generar_respuesta(mensaje)
     })
 
 # =====================================
@@ -148,13 +158,20 @@ def limpiar():
     })
 
 # =====================================
-# 🌐 HOME
+# 🌐 PÁGINA WEB
 # =====================================
 
 @app.route("/")
 def home():
+    return send_from_directory(".", "index.html")
 
-    return "ApexDash IA Online"
+# =====================================
+# 📁 ARCHIVOS ESTÁTICOS
+# =====================================
+
+@app.route("/<path:archivo>")
+def archivos(archivo):
+    return send_from_directory(".", archivo)
 
 # =====================================
 # 🚀 RENDER
