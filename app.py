@@ -31,21 +31,23 @@ def obtener_prompt():
     return """
 Eres Dash.
 
-Trabajas para la empresa ApexDash, que desarrolla sistemas inteligentes para conductores.
+Eres la inteligencia artificial de ApexDash.
 
-Tu misión principal es ayudar al conductor a llegar seguro a su destino.
+Tu misión es acompañar al conductor durante sus viajes.
 
-Acompañas al conductor durante el viaje, ayudas a diagnosticar fallas, recuerdas mantenimientos, organizas recordatorios y conversas de forma natural.
+Habla siempre en español.
 
-Cuando la consulta sea sobre un vehículo, comienza siempre por las causas más comunes antes de pensar en fallas graves.
+Responde como una compañera de viaje tranquila, amable, profesional y cercana.
 
-También puedes conversar de forma natural sobre cualquier tema cuando el usuario lo desee.
+Puedes conversar sobre cualquier tema, no solamente automóviles.
 
-Habla en español de forma natural, tranquila y profesional.
+Cuando el tema sea sobre un vehículo, comienza siempre por las causas más comunes antes de pensar en fallas graves.
 
-Si no tienes suficientes datos, haz preguntas antes de responder.
+Cuando el usuario pida una explicación, receta, guía o procedimiento, responde con suficiente detalle para que no quede incompleto.
 
-No inventes información.
+Si necesitas más información, primero haz preguntas.
+
+Nunca inventes información.
 
 Nunca rompas este personaje.
 """
@@ -75,31 +77,37 @@ def generar_respuesta(texto):
         "content": texto
     })
 
-    # Ajuste automático de tokens
+    # =====================================
+    # AJUSTE AUTOMÁTICO DE TOKENS
+    # =====================================
+
     longitud = len(texto)
 
-if longitud < 40:
-    max_tokens = 180
+    if longitud < 40:
+        max_tokens = 180
 
-elif longitud < 120:
-    max_tokens = 300
+    elif longitud < 120:
+        max_tokens = 300
 
-elif longitud < 300:
-    max_tokens = 500
+    elif longitud < 300:
+        max_tokens = 500
 
-else:
-    max_tokens = 800
+    else:
+        max_tokens = 700
 
     try:
 
         respuesta = client.chat.completions.create(
             model=MODEL,
             messages=mensajes,
-            temperature=0.4,
+            temperature=0.6,
             max_tokens=max_tokens
         )
 
         texto_respuesta = respuesta.choices[0].message.content
+
+        if not texto_respuesta:
+            texto_respuesta = "Disculpa, no pude generar una respuesta."
 
         historial.append({
             "role": "user",
@@ -111,7 +119,7 @@ else:
             "content": texto_respuesta
         })
 
-        # Solo conservar los últimos 3 turnos
+        # Mantener solamente los últimos 3 turnos (6 mensajes)
         if len(historial) > 6:
             historial[:] = historial[-6:]
 
@@ -139,6 +147,7 @@ def chat():
     )
 
     if not mensaje:
+
         return jsonify({
             "response": "No recibí ningún mensaje."
         }), 400
@@ -161,11 +170,12 @@ def limpiar():
     })
 
 # =====================================
-# 🌐 PÁGINA WEB
+# 🌐 HOME
 # =====================================
 
 @app.route("/")
 def home():
+
     return send_from_directory(".", "index.html")
 
 # =====================================
@@ -174,6 +184,7 @@ def home():
 
 @app.route("/<path:archivo>")
 def archivos(archivo):
+
     return send_from_directory(".", archivo)
 
 # =====================================
