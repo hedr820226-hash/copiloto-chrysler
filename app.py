@@ -78,14 +78,17 @@ def generar_respuesta(texto):
     # Ajuste automático de tokens
     longitud = len(texto)
 
-    if longitud < 30:
-        max_tokens = 80
-    elif longitud < 120:
-        max_tokens = 180
-    elif longitud < 300:
-        max_tokens = 350
-    else:
-        max_tokens = 600
+if longitud < 40:
+    max_tokens = 180
+
+elif longitud < 120:
+    max_tokens = 300
+
+elif longitud < 300:
+    max_tokens = 500
+
+else:
+    max_tokens = 800
 
     try:
 
