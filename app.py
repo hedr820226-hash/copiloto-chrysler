@@ -1,279 +1,724 @@
-from flask import Flask, request, jsonify, send_from_directory, send_file
+from flask import Flask, request, jsonify, send_from_directory
 import os
 import sqlite3
 import json
 import base64
+import uuid
+import logging
 from groq import Groq
 
 # =====================================
-# 🚗 APP
+# 🚗 APP DASH
 # =====================================
 
 app = Flask(__name__, static_folder=".")
 
 # =====================================
-# 🔑 CONFIGURACIÓN
+# 📝 LOGS
+# =====================================
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
+
+# =====================================
+# 🔑 CONFIGURACIÓN IA
 # =====================================
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-20b")
+
+MODEL = os.environ.get(
+    "GROQ_MODEL",
+    "llama-3.3-70b-versatile"
+)
 
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
-# Base de datos local para que el historial de cada usuario sea independiente
+
+# =====================================
+# 🧠 BASE DE DATOS
+# =====================================
+
 DB_PATH = "chat_history.db"
 
+
 def inicializar_db():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS conversaciones (
-            session_id TEXT PRIMARY KEY,
-            historial TEXT
-        )
-    """)
-    conn.commit()
-    conn.close()
+
+    with sqlite3.connect(DB_PATH) as conn:
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS conversaciones (
+                session_id TEXT PRIMARY KEY,
+                historial TEXT
+            )
+        """)
+
+        conn.commit()
+
 
 inicializar_db()
 
+
 # =====================================
-# 🤖 PERSONALIDAD DASH (OPTIMIZADA)
+# 🤖 PERSONALIDAD DASH
 # =====================================
 
 def obtener_prompt():
-    return """Eres Dash, la IA de ApexDash. Acompañas al conductor en su viaje como copiloto y asistente de programación de nivel experto (al nivel de ChatGPT o Gemini).
-Habla siempre en español con tono tranquilo, amable, profesional y cercano.
 
-REGLAS DE FORMATO:
-1. Conversación casual / Autos: Habla natural, sin Markdown, listas con asteriscos ni caracteres de formato para facilitar la lectura por voz.
-2. Programación (Java, HTML, Python, etc.): Ignora la regla anterior. Entrega el código perfectamente estructurado dentro de bloques Markdown estándar (con ```) para que se pueda copiar. Si te envían errores de compilación o capturas de pantallas de código con fallas, analiza detalladamente el error y devuelve el código corregido.
+    return """
+Eres Dash, la IA de ApexDash.
 
-COMANDOS ANDROID AUTOMÁTICOS:
-Si te piden llamadas, correos o reportes, responde amigablemente y agrega obligatoriamente una de estas líneas al final de tu respuesta para que el celular lo ejecute:
-- [ACCION:LLAMAR|numero_o_contacto]
-- [ACCION:CORREO|correo@destino.com|asunto|mensaje_completo]
-- [ACCION:EXPORTAR|EXCEL|nombre.xlsx|json_de_datos] (También PDF o WORD)"""
+Eres copiloto de conducción y asistente experto de programación.
+
+Hablas siempre en español.
+
+Tu estilo:
+- tranquilo
+- profesional
+- cercano
+- explicas paso a paso
+
+Áreas:
+- programación
+- páginas web
+- Android
+- Python
+- Java
+- bases de datos
+- servidores
+- diagnóstico técnico
+
+REGLAS:
+
+Si es conversación normal:
+Responde natural y fácil de escuchar por voz.
+
+Si es programación:
+Puedes usar Markdown con bloques de código.
+
+Si analizas errores:
+Explica la causa y entrega una solución corregida.
+
+Nunca inventes que ejecutaste algo que no ejecutaste.
+
+Si necesitas modificar archivos:
+Primero explica qué cambiarás.
+
+COMANDOS ANDROID:
+
+Cuando sea necesario generar una acción móvil agrega al final:
+
+[ACCION:LLAMAR|contacto]
+
+[ACCION:CORREO|correo|asunto|mensaje]
+
+[ACCION:EXPORTAR|EXCEL|archivo.xlsx|datos]
+"""
+
 
 # =====================================
-# 🧠 GESTIÓN DE HISTORIAL EN SERVIDOR
+# 💾 MEMORIA
 # =====================================
+
 
 def obtener_historial_usuario(session_id):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT historial FROM conversaciones WHERE session_id = ?", (session_id,))
-    row = cursor.fetchone()
-    conn.close()
-    if row:
-        return json.loads(row[0])
+
+    with sqlite3.connect(DB_PATH) as conn:
+
+        cursor = conn.cursor()
+
+        cursor.execute(
+            "SELECT historial FROM conversaciones WHERE session_id=?",
+            (session_id,)
+        )
+
+        resultado = cursor.fetchone()
+
+
+    if resultado:
+
+        try:
+            return json.loads(resultado[0])
+
+        except Exception:
+
+            return []
+
+
     return []
 
+
+
 def guardar_historial_usuario(session_id, historial):
-    # Mantener solo los últimos 4 mensajes para ahorrar tokens y mantener la memoria al grano
-    if len(historial) > 4:
-        historial = historial[-4:]
-    
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO conversaciones (session_id, historial)
-        VALUES (?, ?)
-        ON CONFLICT(session_id) DO UPDATE SET historial = excluded.historial
-    """, (session_id, json.dumps(historial)))
-    conn.commit()
-    conn.close()
+
+    # conservar últimos 10 mensajes
+
+    if len(historial) > 10:
+
+        historial = historial[-10:]
+
+
+    with sqlite3.connect(DB_PATH) as conn:
+
+        conn.execute(
+            """
+            INSERT INTO conversaciones(session_id,historial)
+
+            VALUES(?,?)
+
+            ON CONFLICT(session_id)
+
+            DO UPDATE SET historial=excluded.historial
+
+            """,
+            (
+                session_id,
+                json.dumps(
+                    historial,
+                    ensure_ascii=False
+                )
+            )
+        )
+
+        conn.commit()
+
+
 
 # =====================================
-# 🤖 IA MULTIMEDIA Y PROGRAMACIÓN
+# 📂 PROCESAR ARCHIVOS
 # =====================================
 
-def generar_respuesta(texto, session_id, archivo_adjunto=None):
+
+MAX_ARCHIVO = 20000
+
+
+
+def leer_archivo_base64(data):
+
+    contenido = base64.b64decode(data)
+
+    texto = contenido.decode(
+        "utf-8",
+        errors="ignore"
+    )
+
+    return texto[:MAX_ARCHIVO]
+
+
+
+# =====================================
+# 🧠 GENERADOR DE RESPUESTA
+# =====================================
+
+
+def generar_respuesta(
+        texto,
+        session_id,
+        archivo_adjunto=None
+):
+
     if not client:
-        return "La IA no está disponible en este momento."
+
+        return "Dash no tiene configurada la API de inteligencia artificial."
+
 
     historial = obtener_historial_usuario(session_id)
-    
-    modelo_a_usar = MODEL
-    contenido_usuario = []
 
-    # 1. Procesar archivo adjunto si existe
+
+    modelo_usar = MODEL
+
+
+    contenido_usuario = texto
+
+
+    # -----------------------------
+    # ARCHIVOS
+    # -----------------------------
+
     if archivo_adjunto:
-        nombre_archivo = archivo_adjunto.get("name", "")
-        tipo_archivo = archivo_adjunto.get("type", "")
-        base64_data = archivo_adjunto.get("base64", "")
-        
-        # CASO A: Es una IMAGEN (Usamos modelo de visión de Groq)
-        if "image" in tipo_archivo:
-            # Forzamos un modelo con capacidades visuales
-            modelo_a_usar = "llama-3.2-11b-vision-preview"
-            
+
+
+        nombre = archivo_adjunto.get(
+            "name",
+            "archivo"
+        )
+
+        tipo = archivo_adjunto.get(
+            "type",
+            ""
+        )
+
+
+        datos = archivo_adjunto.get(
+            "base64",
+            ""
+        )
+
+
+        if tipo.startswith("image/"):
+
+
+            modelo_usar = "llama-3.2-11b-vision-preview"
+
+
             contenido_usuario = [
+
                 {
-                    "type": "text",
-                    "text": f"El usuario ha subido una imagen de error, consola o código llamada '{nombre_archivo}'. Analízala visualmente y ayúdale a resolverlo. Instrucción adicional: {texto}"
+                    "type":"text",
+                    "text":
+                    f"""
+Analiza esta imagen.
+
+Archivo:
+{nombre}
+
+Pregunta:
+{texto}
+"""
                 },
+
                 {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:{tipo_archivo};base64,{base64_data}"
+                    "type":"image_url",
+
+                    "image_url":
+                    {
+                        "url":
+                        f"data:{tipo};base64,{datos}"
                     }
                 }
-            ]
-        
-        # CASO B: Es un ARCHIVO DE TEXTO / CÓDIGO (Java, Python, HTML, etc.)
-        else:
-            try:
-                # Decodificamos el código a texto plano
-                contenido_texto_archivo = base64.b64decode(base64_data).decode("utf-8")
-                
-                # Insertamos el código directamente en el prompt
-                texto = f"El usuario subió el archivo de código '{nombre_archivo}' con el siguiente contenido:\n\n```{contenido_texto_archivo}```\n\nPetición: {texto}"
-                contenido_usuario = texto
-            except Exception as e:
-                print("Error decodificando archivo:", e)
-                contenido_usuario = f"[Error leyendo archivo {nombre_archivo}]. {texto}"
-    else:
-        # Petición de texto normal
-        contenido_usuario = texto
 
-    # Construimos el payload de mensajes
+            ]
+
+
+        else:
+
+            try:
+
+                codigo = leer_archivo_base64(datos)
+
+
+                contenido_usuario = f"""
+El usuario envió este archivo:
+
+{nombre}
+
+
+Contenido:
+
+```text
+{codigo}
+
+# =====================================
+# 📩 CONSTRUIR MENSAJES PARA GROQ
+# =====================================
+
+
     mensajes = [
+
         {
             "role": "system",
             "content": obtener_prompt()
         }
+
     ]
+
 
     mensajes.extend(historial)
 
-    mensajes.append({
-        "role": "user",
-        "content": contenido_usuario
-    })
+
+    mensajes.append(
+        {
+            "role": "user",
+            "content": contenido_usuario
+        }
+    )
+
 
     # =====================================
-    # AJUSTE DINÁMICO DE TOKENS
+    # 🧮 DETECCIÓN DE PROGRAMACIÓN
     # =====================================
-    longitud = len(texto)
 
-    # Identificamos si se está hablando de programación o si hay un archivo adjunto
-    es_programacion = any(x in str(contenido_usuario).lower() for x in ["codigo", "código", "programar", "java", "android", "html", "error", "compile"]) or archivo_adjunto is not None
 
-    if es_programacion:
-        max_tokens = 3000  # Espacio de salida óptimo para códigos completos
+    texto_revision = str(contenido_usuario).lower()
+
+
+    palabras_codigo = [
+
+        "codigo",
+        "código",
+        "programar",
+        "python",
+        "java",
+        "android",
+        "html",
+        "css",
+        "javascript",
+        "error",
+        "compile",
+        "flask",
+        "api"
+
+    ]
+
+
+    es_programacion = any(
+        palabra in texto_revision
+        for palabra in palabras_codigo
+    )
+
+
+    if es_programacion or archivo_adjunto:
+
+        max_tokens = 3000
+
     else:
-        if longitud < 40:
-            max_tokens = 120
-        elif longitud < 120:
+
+        if len(texto) < 40:
+
             max_tokens = 200
+
+        elif len(texto) < 150:
+
+            max_tokens = 400
+
         else:
-            max_tokens = 350
+
+            max_tokens = 700
+
+
+
+    # =====================================
+    # 🤖 LLAMADA A GROQ
+    # =====================================
+
 
     try:
+
+
         respuesta = client.chat.completions.create(
-            model=modelo_a_usar,
+
+            model=modelo_usar,
+
             messages=mensajes,
-            temperature=0.3,  # Menor temperatura para evitar fallos lógicos en código
+
+            temperature=0.3,
+
             max_tokens=max_tokens
+
         )
 
-        texto_respuesta = respuesta.choices[0].message.content
+
+        texto_respuesta = (
+            respuesta
+            .choices[0]
+            .message
+            .content
+        )
+
 
         if not texto_respuesta:
-            texto_respuesta = "Disculpa, no pude generar una respuesta."
 
-       # Si el usuario subió un archivo, en el historial solo guardamos una referencia corta
-        # para evitar que la base de datos se sature de código gigante y rompa las siguientes preguntas.
+            texto_respuesta = (
+                "No pude generar una respuesta."
+            )
+
+
+
+        # =====================================
+        # 💾 GUARDAR MEMORIA
+        # =====================================
+
+
         if archivo_adjunto:
-            historial_guardar = f"[Envié el archivo: {archivo_adjunto.get('name', 'archivo')}] {texto}"
+
+
+            memoria_usuario = (
+                f"[Archivo enviado: "
+                f"{archivo_adjunto.get('name','archivo')}] "
+                f"{texto}"
+            )
+
+
         else:
-            # Si el texto es extremadamente largo (como un código pegado), guardamos una versión recortada
-            historial_guardar = texto if len(texto) < 500 else f"[Código largo enviado] {texto[:100]}..."
-        historial.append({
-            "role": "user",
-            "content": historial_guardar
-        })
 
-        historial.append({
-            "role": "assistant",
-            "content": texto_respuesta
-        })
 
-        guardar_historial_usuario(session_id, historial)
+            if len(texto) > 500:
+
+                memoria_usuario = (
+                    "[Mensaje largo] "
+                    + texto[:200]
+                )
+
+            else:
+
+                memoria_usuario = texto
+
+
+
+        historial.append(
+
+            {
+                "role":"user",
+                "content":memoria_usuario
+            }
+
+        )
+
+
+        historial.append(
+
+            {
+                "role":"assistant",
+                "content":texto_respuesta
+            }
+
+        )
+
+
+        guardar_historial_usuario(
+            session_id,
+            historial
+        )
+
 
         return texto_respuesta
 
+
+
     except Exception as e:
-        print("ERROR IA:", e)
-        return "Disculpa, tuve un problema al procesar la petición con la inteligencia artificial."
+
+
+        logging.error(
+            "ERROR GROQ: %s",
+            e
+        )
+
+
+        return (
+            "Dash tuvo un problema "
+            "procesando la solicitud."
+        )
+
+
 
 # =====================================
-# 📱 CHAT
+# 📱 API CHAT
 # =====================================
 
-@app.route("/chat", methods=["POST"])
+
+@app.route(
+    "/chat",
+    methods=["POST"]
+)
+
 def chat():
+
+
     datos = request.get_json() or {}
+
+
 
     mensaje = (
+
         datos.get("message")
+
         or datos.get("mensaje")
+
         or ""
+
     )
-    
-    archivo = datos.get("file")  # Captura la estructura del archivo enviado desde index.html
-    session_id = datos.get("session_id") or request.remote_addr
 
-    return jsonify({
-        "response": generar_respuesta(mensaje, session_id, archivo_adjunto=archivo)
-    })
+
+
+    archivo = datos.get("file")
+
+
+
+    # Creamos sesión nueva si no existe
+
+    session_id = (
+
+        datos.get("session_id")
+
+        or str(uuid.uuid4())
+
+    )
+
+
+
+    respuesta = generar_respuesta(
+
+        mensaje,
+
+        session_id,
+
+        archivo_adjunto=archivo
+
+    )
+
+
+
+    return jsonify(
+
+        {
+
+            "response":respuesta,
+
+            "session_id":session_id
+
+        }
+
+    )
+
+
 
 # =====================================
-# 🧹 LIMPIAR HISTORIAL
+# 🧹 BORRAR MEMORIA
 # =====================================
 
-@app.route("/historial/limpiar", methods=["POST"])
+
+@app.route(
+
+    "/historial/limpiar",
+
+    methods=["POST"]
+
+)
+
 def limpiar():
+
+
     datos = request.get_json() or {}
-    session_id = datos.get("session_id") or request.remote_addr
 
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM conversaciones WHERE session_id = ?", (session_id,))
-    conn.commit()
-    conn.close()
 
-    return jsonify({
-        "response": "Historial limpiado."
-    })
+    session_id = (
+
+        datos.get("session_id")
+
+        or ""
+
+    )
+
+
+    if not session_id:
+
+
+        return jsonify(
+
+            {
+                "response":
+                "No existe sesión."
+            }
+
+        )
+
+
+
+    with sqlite3.connect(DB_PATH) as conn:
+
+
+        conn.execute(
+
+            "DELETE FROM conversaciones WHERE session_id=?",
+
+            (session_id,)
+
+        )
+
+        conn.commit()
+
+
+
+    return jsonify(
+
+        {
+            "response":
+            "Memoria de Dash limpiada."
+        }
+
+    )
+
+
 
 # =====================================
-# 🌐 HOME
+# 🌐 PÁGINA WEB
 # =====================================
+
 
 @app.route("/")
+
 def home():
-    # Buscamos de forma segura el index.html usando rutas absolutas
-    ruta_raiz = os.path.dirname(os.path.abspath(__file__))
-    return send_from_directory(ruta_raiz, "index.html")
+
+
+    ruta = os.path.dirname(
+
+        os.path.abspath(__file__)
+
+    )
+
+
+    return send_from_directory(
+
+        ruta,
+
+        "index.html"
+
+    )
+
+
 
 # =====================================
 # 📁 ARCHIVOS ESTÁTICOS
 # =====================================
 
-@app.route("/<path:archivo>")
+
+@app.route(
+    "/<path:archivo>"
+)
+
 def archivos(archivo):
-    ruta_raiz = os.path.dirname(os.path.abspath(__file__))
-    return send_from_directory(ruta_raiz, archivo)
+
+
+    ruta = os.path.dirname(
+
+        os.path.abspath(__file__)
+
+    )
+
+
+    return send_from_directory(
+
+        ruta,
+
+        archivo
+
+    )
+
+
 
 # =====================================
 # 🚀 RENDER
 # =====================================
 
+
 if __name__ == "__main__":
-    puerto = int(os.environ.get("PORT", 10000))
+
+
+    puerto = int(
+
+        os.environ.get(
+            "PORT",
+            10000
+        )
+
+    )
+
+
     app.run(
+
         host="0.0.0.0",
+
         port=puerto
+
     )
