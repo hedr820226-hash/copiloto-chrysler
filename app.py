@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, send_from_directory, send_file
 import os
 import sqlite3
 import json
+import base64
 from groq import Groq
 
 # =====================================
@@ -19,7 +20,7 @@ MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-20b")
 
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
-# Base de datos local para que el historial de cada usuario sea independiente
+# Base de datos local para que el historial de cada usuario sea independiente[cite: 6]
 DB_PATH = "chat_history.db"
 
 def inicializar_db():
@@ -41,18 +42,18 @@ inicializar_db()
 # =====================================
 
 def obtener_prompt():
-    return """Eres Dash, la IA de ApexDash. Acompañas al conductor en su viaje como copiloto y asistente de programación de nivel experto (al nivel de ChatGPT o Gemini).
-Habla siempre en español con tono tranquilo, amable, profesional y cercano.
+    return """Eres Dash, la IA de ApexDash. Acompañas al conductor en su viaje como copiloto y asistente de programación de nivel experto (al nivel de ChatGPT o Gemini)[cite: 6].
+Habla siempre en español con tono tranquilo, amable, profesional y cercano[cite: 6].
 
 REGLAS DE FORMATO:
-1. Conversación casual / Autos: Habla natural, sin Markdown, listas con asteriscos ni caracteres de formato para facilitar la lectura por voz.
-2. Programación (Java, HTML, Python, etc.): Ignora la regla anterior. Entrega el código perfectamente estructurado dentro de bloques Markdown estándar (con ```) para que se pueda copiar. Si te envían errores de compilación, analiza detalladamente el fallo y devuelve el código corregido.
+1. Conversación casual / Autos: Habla natural, sin Markdown, listas con asteriscos ni caracteres de formato para facilitar la lectura por voz[cite: 6].
+2. Programación (Java, HTML, Python, etc.): Ignora la regla anterior[cite: 6]. Entrega el código perfectamente estructurado dentro de bloques Markdown estándar (con ```) para que se pueda copiar[cite: 6]. Si te envían errores de compilación o capturas de pantallas de código con fallas, analiza detalladamente el error y devuelve el código corregido[cite: 6].
 
 COMANDOS ANDROID AUTOMÁTICOS:
 Si te piden llamadas, correos o reportes, responde amigablemente y agrega obligatoriamente una de estas líneas al final de tu respuesta para que el celular lo ejecute:
 - [ACCION:LLAMAR|numero_o_contacto]
 - [ACCION:CORREO|correo@destino.com|asunto|mensaje_completo]
-- [ACCION:EXPORTAR|EXCEL|nombre.xlsx|json_de_datos] (También PDF o WORD)"""
+- [ACCION:EXPORTAR|EXCEL|nombre.xlsx|json_de_datos] (También PDF o WORD)[cite: 6]"""
 
 # =====================================
 # 🧠 GESTIÓN DE HISTORIAL EN SERVIDOR
@@ -69,7 +70,7 @@ def obtener_historial_usuario(session_id):
     return []
 
 def guardar_historial_usuario(session_id, historial):
-    # Mantener solo los últimos 4 mensajes para ahorrar tokens y mantener la memoria al grano
+    # Mantener solo los últimos 4 mensajes para ahorrar tokens y mantener la memoria al grano[cite: 6]
     if len(historial) > 4:
         historial = historial[-4:]
     
@@ -84,15 +85,59 @@ def guardar_historial_usuario(session_id, historial):
     conn.close()
 
 # =====================================
-# 🤖 IA
+# 🤖 IA MULTIMEDIA Y PROGRAMACIÓN
 # =====================================
 
-def generar_respuesta(texto, session_id):
+def generar_respuesta(texto, session_id, archivo_adjunto=None):
     if not client:
-        return "La IA no está disponible en este momento."
+        return "La IA no está disponible en este momento."[cite: 6]
 
-    historial = obtener_historial_usuario(session_id)
+    historial = obtener_historial_usuario(session_id)[cite: 6]
+    
+    modelo_a_usar = MODEL
+    contenido_usuario = []
 
+    # 1. Procesar archivo adjunto si existe
+    if archivo_adjunto:
+        nombre_archivo = archivo_adjunto.get("name", "")
+        tipo_archivo = archivo_adjunto.get("type", "")
+        base64_data = archivo_adjunto.get("base64", "")
+        
+        # CASO A: Es una IMAGEN (Usamos modelo de visión de Groq)
+        if "image" in tipo_archivo:
+            # Forzamos un modelo con capacidades visuales
+            modelo_a_usar = "llama-3.2-11b-vision-preview"
+            
+            contenido_usuario = [
+                {
+                    "type": "text",
+                    "text": f"El usuario ha subido una imagen de error, consola o código llamada '{nombre_archivo}'. Analízala visualmente y ayúdale a resolverlo. Instrucción adicional: {texto}"
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:{tipo_archivo};base64,{base64_data}"
+                    }
+                }
+            ]
+        
+        # CASO B: Es un ARCHIVO DE TEXTO / CÓDIGO (Java, Python, HTML, etc.)
+        else:
+            try:
+                # Decodificamos el código a texto plano
+                contenido_texto_archivo = base64.b64decode(base64_data).decode("utf-8")
+                
+                # Insertamos el código directamente en el prompt
+                texto = f"El usuario subió el archivo de código '{nombre_archivo}' con el siguiente contenido:\n\n```{contenido_texto_archivo}```\n\nPetición: {texto}"
+                contenido_usuario = texto
+            except Exception as e:
+                print("Error decodificando archivo:", e)
+                contenido_usuario = f"[Error leyendo archivo {nombre_archivo}]. {texto}"
+    else:
+        # Petición de texto normal
+        contenido_usuario = texto
+
+    # Construimos el payload de mensajes
     mensajes = [
         {
             "role": "system",
@@ -100,11 +145,11 @@ def generar_respuesta(texto, session_id):
         }
     ]
 
-    mensajes.extend(historial)
+    mensajes.extend(historial)[cite: 6]
 
     mensajes.append({
         "role": "user",
-        "content": texto
+        "content": contenido_usuario
     })
 
     # =====================================
@@ -112,50 +157,52 @@ def generar_respuesta(texto, session_id):
     # =====================================
     longitud = len(texto)
 
-    # Si el usuario pide explícitamente código o habla de programación, aumentamos el límite de salida
-    es_programacion = any(x in texto.lower() for x in ["codigo", "código", "programar", "java", "android", "html", "error", "error de", "compile"])
+    # Identificamos si se está hablando de programación o si hay un archivo adjunto
+    es_programacion = any(x in str(contenido_usuario).lower() for x in ["codigo", "código", "programar", "java", "android", "html", "error", "compile"]) or archivo_adjunto is not None
 
     if es_programacion:
-        max_tokens = 1000  # Permite que entregue sistemas o scripts completos sin cortarse
+        max_tokens = 1200  # Espacio de salida óptimo para códigos completos[cite: 6]
     else:
         if longitud < 40:
             max_tokens = 120
         elif longitud < 120:
             max_tokens = 200
         else:
-            max_tokens = 350
+            max_tokens = 350[cite: 6]
 
     try:
         respuesta = client.chat.completions.create(
-            model=MODEL,
+            model=modelo_a_usar,
             messages=mensajes,
-            temperature=0.4,  # Menor temperatura para evitar errores y alucinaciones en código
+            temperature=0.3,  # Menor temperatura para evitar fallos lógicos en código[cite: 6]
             max_tokens=max_tokens
         )
 
-        texto_respuesta = respuesta.choices[0].message.content
+        texto_respuesta = respuesta.choices[0].message.content[cite: 6]
 
         if not texto_respuesta:
-            texto_respuesta = "Disculpa, no pude generar una respuesta."
+            texto_respuesta = "Disculpa, no pude generar una respuesta."[cite: 6]
 
-        # Guardar en base de datos local
+        # Para no saturar el historial de SQLite con base64 pesados de imágenes, guardamos solo la referencia textual
+        historial_guardar = texto if not (archivo_adjunto and "image" in archivo_adjunto.get("type", "")) else f"[Analizaste la imagen {archivo_adjunto.get('name')}] {texto}"
+
         historial.append({
             "role": "user",
-            "content": texto
-        })
+            "content": historial_guardar
+        })[cite: 6]
 
         historial.append({
             "role": "assistant",
             "content": texto_respuesta
-        })
+        })[cite: 6]
 
-        guardar_historial_usuario(session_id, historial)
+        guardar_historial_usuario(session_id, historial)[cite: 6]
 
-        return texto_respuesta
+        return texto_respuesta[cite: 6]
 
     except Exception as e:
         print("ERROR IA:", e)
-        return "Disculpa, tuve un problema al comunicarme con la inteligencia artificial."
+        return "Disculpa, tuve un problema al procesar la petición con la inteligencia artificial."
 
 # =====================================
 # 📱 CHAT
@@ -163,24 +210,19 @@ def generar_respuesta(texto, session_id):
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    datos = request.get_json() or {}
+    datos = request.get_json() or {}[cite: 6]
 
     mensaje = (
         datos.get("message")
         or datos.get("mensaje")
         or ""
-    )
+    )[cite: 6]
     
-    # Si tu frontend no envía un session_id, se utiliza la IP del celular como identificador
-    session_id = datos.get("session_id") or request.remote_addr
-
-    if not mensaje:
-        return jsonify({
-            "response": "No recibí ningún mensaje."
-        }), 400
+    archivo = datos.get("file")  # Captura la estructura del archivo enviado desde index.html
+    session_id = datos.get("session_id") or request.remote_addr[cite: 6]
 
     return jsonify({
-        "response": generar_respuesta(mensaje, session_id)
+        "response": generar_respuesta(mensaje, session_id, archivo_adjunto=archivo)
     })
 
 # =====================================
@@ -189,8 +231,8 @@ def chat():
 
 @app.route("/historial/limpiar", methods=["POST"])
 def limpiar():
-    datos = request.get_json() or {}
-    session_id = datos.get("session_id") or request.remote_addr
+    datos = request.get_json() or {}[cite: 6]
+    session_id = datos.get("session_id") or request.remote_addr[cite: 6]
 
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -200,7 +242,7 @@ def limpiar():
 
     return jsonify({
         "response": "Historial limpiado."
-    })
+    })[cite: 6]
 
 # =====================================
 # 🌐 HOME
@@ -208,7 +250,7 @@ def limpiar():
 
 @app.route("/")
 def home():
-    return send_from_directory(".", "index.html")
+    return send_from_directory(".", "index.html")[cite: 6]
 
 # =====================================
 # 📁 ARCHIVOS ESTÁTICOS
@@ -216,15 +258,15 @@ def home():
 
 @app.route("/<path:archivo>")
 def archivos(archivo):
-    return send_from_directory(".", archivo)
+    return send_from_directory(".", archivo)[cite: 6]
 
 # =====================================
 # 🚀 RENDER
 # =====================================
 
 if __name__ == "__main__":
-    puerto = int(os.environ.get("PORT", 10000))
+    puerto = int(os.environ.get("PORT", 10000))[cite: 6]
     app.run(
         host="0.0.0.0",
         port=puerto
-    )
+    )[cite: 6]
