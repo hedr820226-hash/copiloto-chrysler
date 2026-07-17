@@ -512,116 +512,327 @@ ApexDash AI • Copiloto Automotriz Inteligente 🚗🔥
 </footer>
 
 <script>
+
 let selectedFile = null;
 
-// Maneja la selección del archivo y actualiza la UI
+
+// =====================================================
+// MEMORIA DE SESIÓN DASH
+// =====================================================
+
+let dashSession = localStorage.getItem("dash_session");
+
+if(!dashSession){
+
+    dashSession = crypto.randomUUID();
+
+    localStorage.setItem(
+        "dash_session",
+        dashSession
+    );
+
+}
+
+
+// =====================================================
+// SELECCIONAR ARCHIVO
+// =====================================================
+
 function handleFileSelect(event) {
+
     const file = event.target.files[0];
+
     if (!file) return;
 
+
     selectedFile = file;
-    const previewContainer = document.getElementById('previewContainer');
-    const previewName = document.getElementById('previewName');
 
-    previewName.textContent = `📎 Archivo listo para subir: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+
+    const previewContainer =
+    document.getElementById('previewContainer');
+
+
+    const previewName =
+    document.getElementById('previewName');
+
+
+    previewName.textContent =
+    `📎 Archivo listo: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+
+
     previewContainer.style.display = 'flex';
+
 }
 
-// Limpia el archivo seleccionado
-function clearFile() {
+
+// =====================================================
+// LIMPIAR ARCHIVO
+// =====================================================
+
+function clearFile(){
+
     selectedFile = null;
-    document.getElementById('fileInput').value = '';
-    document.getElementById('previewContainer').style.display = 'none';
+
+    document.getElementById('fileInput').value='';
+
+    document.getElementById('previewContainer').style.display='none';
+
 }
 
-// Helper simple para convertir Markdown de código en bloques HTML renderizables
-function formatMarkdown(text) {
-    // Escapar caracteres HTML básicos para evitar problemas con código inyectado
-    let safeText = text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
 
-    // Convertir bloques de código multilinea (```java ... ```)
-    safeText = safeText.replace(/```(\w*)\n([\s\S]*?)```/g, function(match, lang, code) {
-        return `<pre><code class="language-${lang}">${code.trim()}</code></pre>`;
-    });
 
-    // Convertir código en línea (`code`)
-    safeText = safeText.replace(/`([^`]+)`/g, '<code>$1</code>');
+// =====================================================
+// FORMATO MARKDOWN
+// =====================================================
 
-    // Convertir saltos de línea normales a <br> para que el chat no colapse el texto plano
-    return safeText.replace(/\n/g, '<br>');
-}
+function formatMarkdown(text){
 
-async function sendMessage(){
-    const input = document.getElementById('userInput');
-    const chat = document.getElementById('chatMessages');
-    const text = input.value.trim();
 
-    if(text === '' && !selectedFile) return;
+    if(!text){
 
-    let userDisplayMessage = text;
-    let fileData = null;
+        return "";
 
-    if (selectedFile) {
-        userDisplayMessage = `📎 [Archivo: ${selectedFile.name}]<br>${text}`;
-
-        fileData = await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve({
-                name: selectedFile.name,
-                type: selectedFile.type,
-                base64: reader.result.split(',')[1]
-            });
-            reader.readAsDataURL(selectedFile);
-        });
     }
 
-    // Insertar mensaje formateado del usuario
+
+    let safeText = text
+
+    .replace(/&/g,"&amp;")
+
+    .replace(/</g,"&lt;")
+
+    .replace(/>/g,"&gt;");
+
+
+
+    safeText = safeText.replace(
+        /```(\w*)\n([\s\S]*?)```/g,
+        function(match,lang,code){
+
+            return `<pre><code>${code.trim()}</code></pre>`;
+
+        }
+    );
+
+
+
+    safeText = safeText.replace(
+        /`([^`]+)`/g,
+        '<code>$1</code>'
+    );
+
+
+    return safeText.replace(/\n/g,"<br>");
+
+}
+
+
+
+// =====================================================
+// ENVIAR MENSAJE A DASH
+// =====================================================
+
+async function sendMessage(){
+
+
+    const input =
+    document.getElementById('userInput');
+
+
+    const chat =
+    document.getElementById('chatMessages');
+
+
+    const text =
+    input.value.trim();
+
+
+
+    if(text==="" && !selectedFile){
+
+        return;
+
+    }
+
+
+
+    let fileData=null;
+
+
+
+    if(selectedFile){
+
+
+        fileData = await new Promise((resolve)=>{
+
+
+            const reader=new FileReader();
+
+
+            reader.onloadend=()=>{
+
+
+                resolve({
+
+                    nombre:selectedFile.name,
+
+                    tipo:selectedFile.type,
+
+                    contenido:
+                    reader.result.split(',')[1]
+
+                });
+
+
+            };
+
+
+            reader.readAsDataURL(selectedFile);
+
+
+        });
+
+
+    }
+
+
+
     chat.innerHTML += `
-        <div class="message user">
-            Tú: ${formatMarkdown(userDisplayMessage)}
-        </div>
+
+    <div class="message user">
+
+    Tú:<br>
+
+    ${formatMarkdown(text)}
+
+    ${selectedFile ? "<br>📎 "+selectedFile.name : ""}
+
+    </div>
+
     `;
 
-    input.value = '';
+
+
+    input.value="";
+
     clearFile();
-    chat.scrollTop = chat.scrollHeight;
+
+
+    chat.scrollTop=chat.scrollHeight;
+
+
 
     try{
-        const response = await fetch('/chat',{
+
+
+        const response = await fetch('/chat/file',{
+
+
             method:'POST',
+
+
             headers:{
-                'Content-Type': 'application/json'
+
+
+                'Content-Type':'application/json'
+
+
             },
+
+
             body:JSON.stringify({
-                message: text,
-                file: fileData
+
+
+                session_id:dashSession,
+
+
+                mensaje:text,
+
+
+                archivo:fileData
+
+
             })
+
+
         });
+
+
 
         const data = await response.json();
 
-        // Renderiza el markdown de Dash con formato de código limpio
+
+
+        if(data.session_id){
+
+
+            dashSession=data.session_id;
+
+
+            localStorage.setItem(
+
+                "dash_session",
+
+                dashSession
+
+            );
+
+        }
+
+
+
         chat.innerHTML += `
-            <div class="message dash">
-                Dash:<br>${formatMarkdown(data.response)}
-            </div>
+
+
+        <div class="message dash">
+
+
+        Dash:<br>
+
+
+        ${formatMarkdown(data.respuesta || data.error)}
+
+
+        </div>
+
+
         `;
 
-        chat.scrollTop = chat.scrollHeight;
 
-    }catch(e){
-        chat.innerHTML += `
-            <div class="message dash">
-                Dash: Error conectando con la IA.
-            </div>
-        `;
+
+        chat.scrollTop=chat.scrollHeight;
+
+
+
     }
-}
-</script>
 
+    catch(error){
+
+
+        chat.innerHTML += `
+
+
+        <div class="message dash">
+
+
+        Dash: Error conectando con el servidor.
+
+
+        </div>
+
+
+        `;
+
+
+        console.error(error);
+
+
+    }
+
+
+}
+
+</script>
 </body>
 
 </html>
