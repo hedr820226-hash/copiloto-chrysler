@@ -183,9 +183,13 @@ def generar_respuesta(texto, session_id, archivo_adjunto=None):
         if not texto_respuesta:
             texto_respuesta = "Disculpa, no pude generar una respuesta."
 
-        # Para no saturar el historial de SQLite con base64 pesados de imágenes, guardamos solo la referencia textual
-        historial_guardar = texto if not (archivo_adjunto and "image" in archivo_adjunto.get("type", "")) else f"[Analizaste la imagen {archivo_adjunto.get('name')}] {texto}"
-
+       # Si el usuario subió un archivo, en el historial solo guardamos una referencia corta
+        # para evitar que la base de datos se sature de código gigante y rompa las siguientes preguntas.
+        if archivo_adjunto:
+            historial_guardar = f"[Envié el archivo: {archivo_adjunto.get('name', 'archivo')}] {texto}"
+        else:
+            # Si el texto es extremadamente largo (como un código pegado), guardamos una versión recortada
+            historial_guardar = texto if len(texto) < 500 else f"[Código largo enviado] {texto[:100]}..."
         historial.append({
             "role": "user",
             "content": historial_guardar
