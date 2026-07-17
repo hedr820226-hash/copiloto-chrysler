@@ -20,7 +20,7 @@ MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-20b")
 
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
-# Base de datos local para que el historial de cada usuario sea independiente[cite: 6]
+# Base de datos local para que el historial de cada usuario sea independiente
 DB_PATH = "chat_history.db"
 
 def inicializar_db():
@@ -42,18 +42,18 @@ inicializar_db()
 # =====================================
 
 def obtener_prompt():
-    return """Eres Dash, la IA de ApexDash. Acompañas al conductor en su viaje como copiloto y asistente de programación de nivel experto (al nivel de ChatGPT o Gemini)[cite: 6].
-Habla siempre en español con tono tranquilo, amable, profesional y cercano[cite: 6].
+    return """Eres Dash, la IA de ApexDash. Acompañas al conductor en su viaje como copiloto y asistente de programación de nivel experto (al nivel de ChatGPT o Gemini).
+Habla siempre en español con tono tranquilo, amable, profesional y cercano.
 
 REGLAS DE FORMATO:
-1. Conversación casual / Autos: Habla natural, sin Markdown, listas con asteriscos ni caracteres de formato para facilitar la lectura por voz[cite: 6].
-2. Programación (Java, HTML, Python, etc.): Ignora la regla anterior[cite: 6]. Entrega el código perfectamente estructurado dentro de bloques Markdown estándar (con ```) para que se pueda copiar[cite: 6]. Si te envían errores de compilación o capturas de pantallas de código con fallas, analiza detalladamente el error y devuelve el código corregido[cite: 6].
+1. Conversación casual / Autos: Habla natural, sin Markdown, listas con asteriscos ni caracteres de formato para facilitar la lectura por voz.
+2. Programación (Java, HTML, Python, etc.): Ignora la regla anterior. Entrega el código perfectamente estructurado dentro de bloques Markdown estándar (con ```) para que se pueda copiar. Si te envían errores de compilación o capturas de pantallas de código con fallas, analiza detalladamente el error y devuelve el código corregido.
 
 COMANDOS ANDROID AUTOMÁTICOS:
 Si te piden llamadas, correos o reportes, responde amigablemente y agrega obligatoriamente una de estas líneas al final de tu respuesta para que el celular lo ejecute:
 - [ACCION:LLAMAR|numero_o_contacto]
 - [ACCION:CORREO|correo@destino.com|asunto|mensaje_completo]
-- [ACCION:EXPORTAR|EXCEL|nombre.xlsx|json_de_datos] (También PDF o WORD)[cite: 6]"""
+- [ACCION:EXPORTAR|EXCEL|nombre.xlsx|json_de_datos] (También PDF o WORD)"""
 
 # =====================================
 # 🧠 GESTIÓN DE HISTORIAL EN SERVIDOR
@@ -70,7 +70,7 @@ def obtener_historial_usuario(session_id):
     return []
 
 def guardar_historial_usuario(session_id, historial):
-    # Mantener solo los últimos 4 mensajes para ahorrar tokens y mantener la memoria al grano[cite: 6]
+    # Mantener solo los últimos 4 mensajes para ahorrar tokens y mantener la memoria al grano
     if len(historial) > 4:
         historial = historial[-4:]
     
@@ -90,9 +90,9 @@ def guardar_historial_usuario(session_id, historial):
 
 def generar_respuesta(texto, session_id, archivo_adjunto=None):
     if not client:
-        return "La IA no está disponible en este momento."[cite: 6]
+        return "La IA no está disponible en este momento."
 
-    historial = obtener_historial_usuario(session_id)[cite: 6]
+    historial = obtener_historial_usuario(session_id)
     
     modelo_a_usar = MODEL
     contenido_usuario = []
@@ -145,7 +145,7 @@ def generar_respuesta(texto, session_id, archivo_adjunto=None):
         }
     ]
 
-    mensajes.extend(historial)[cite: 6]
+    mensajes.extend(historial)
 
     mensajes.append({
         "role": "user",
@@ -161,27 +161,27 @@ def generar_respuesta(texto, session_id, archivo_adjunto=None):
     es_programacion = any(x in str(contenido_usuario).lower() for x in ["codigo", "código", "programar", "java", "android", "html", "error", "compile"]) or archivo_adjunto is not None
 
     if es_programacion:
-        max_tokens = 1200  # Espacio de salida óptimo para códigos completos[cite: 6]
+        max_tokens = 1200  # Espacio de salida óptimo para códigos completos
     else:
         if longitud < 40:
             max_tokens = 120
         elif longitud < 120:
             max_tokens = 200
         else:
-            max_tokens = 350[cite: 6]
+            max_tokens = 350
 
     try:
         respuesta = client.chat.completions.create(
             model=modelo_a_usar,
             messages=mensajes,
-            temperature=0.3,  # Menor temperatura para evitar fallos lógicos en código[cite: 6]
+            temperature=0.3,  # Menor temperatura para evitar fallos lógicos en código
             max_tokens=max_tokens
         )
 
-        texto_respuesta = respuesta.choices[0].message.content[cite: 6]
+        texto_respuesta = respuesta.choices[0].message.content
 
         if not texto_respuesta:
-            texto_respuesta = "Disculpa, no pude generar una respuesta."[cite: 6]
+            texto_respuesta = "Disculpa, no pude generar una respuesta."
 
         # Para no saturar el historial de SQLite con base64 pesados de imágenes, guardamos solo la referencia textual
         historial_guardar = texto if not (archivo_adjunto and "image" in archivo_adjunto.get("type", "")) else f"[Analizaste la imagen {archivo_adjunto.get('name')}] {texto}"
@@ -189,16 +189,16 @@ def generar_respuesta(texto, session_id, archivo_adjunto=None):
         historial.append({
             "role": "user",
             "content": historial_guardar
-        })[cite: 6]
+        })
 
         historial.append({
             "role": "assistant",
             "content": texto_respuesta
-        })[cite: 6]
+        })
 
-        guardar_historial_usuario(session_id, historial)[cite: 6]
+        guardar_historial_usuario(session_id, historial)
 
-        return texto_respuesta[cite: 6]
+        return texto_respuesta
 
     except Exception as e:
         print("ERROR IA:", e)
@@ -210,16 +210,16 @@ def generar_respuesta(texto, session_id, archivo_adjunto=None):
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    datos = request.get_json() or {}[cite: 6]
+    datos = request.get_json() or {}
 
     mensaje = (
         datos.get("message")
         or datos.get("mensaje")
         or ""
-    )[cite: 6]
+    )
     
     archivo = datos.get("file")  # Captura la estructura del archivo enviado desde index.html
-    session_id = datos.get("session_id") or request.remote_addr[cite: 6]
+    session_id = datos.get("session_id") or request.remote_addr
 
     return jsonify({
         "response": generar_respuesta(mensaje, session_id, archivo_adjunto=archivo)
@@ -231,8 +231,8 @@ def chat():
 
 @app.route("/historial/limpiar", methods=["POST"])
 def limpiar():
-    datos = request.get_json() or {}[cite: 6]
-    session_id = datos.get("session_id") or request.remote_addr[cite: 6]
+    datos = request.get_json() or {}
+    session_id = datos.get("session_id") or request.remote_addr
 
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -242,7 +242,7 @@ def limpiar():
 
     return jsonify({
         "response": "Historial limpiado."
-    })[cite: 6]
+    })
 
 # =====================================
 # 🌐 HOME
@@ -250,7 +250,9 @@ def limpiar():
 
 @app.route("/")
 def home():
-    return send_from_directory(".", "index.html")[cite: 6]
+    # Buscamos de forma segura el index.html usando rutas absolutas
+    ruta_raiz = os.path.dirname(os.path.abspath(__file__))
+    return send_from_directory(ruta_raiz, "index.html")
 
 # =====================================
 # 📁 ARCHIVOS ESTÁTICOS
@@ -258,15 +260,16 @@ def home():
 
 @app.route("/<path:archivo>")
 def archivos(archivo):
-    return send_from_directory(".", archivo)[cite: 6]
+    ruta_raiz = os.path.dirname(os.path.abspath(__file__))
+    return send_from_directory(ruta_raiz, archivo)
 
 # =====================================
 # 🚀 RENDER
 # =====================================
 
 if __name__ == "__main__":
-    puerto = int(os.environ.get("PORT", 10000))[cite: 6]
+    puerto = int(os.environ.get("PORT", 10000))
     app.run(
         host="0.0.0.0",
         port=puerto
-    )[cite: 6]
+    )
