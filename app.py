@@ -161,7 +161,7 @@ def generar_respuesta(texto, session_id, archivo_adjunto=None):
     es_programacion = any(x in str(contenido_usuario).lower() for x in ["codigo", "código", "programar", "java", "android", "html", "error", "compile"]) or archivo_adjunto is not None
 
     if es_programacion:
-        max_tokens = 1200  # Espacio de salida óptimo para códigos completos
+        max_tokens = 3000  # Espacio de salida óptimo para códigos completos
     else:
         if longitud < 40:
             max_tokens = 120
