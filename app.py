@@ -1,5 +1,7 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, send_file
 import os
+import sqlite3
+import json
 from groq import Groq
 
 # =====================================
@@ -17,65 +19,79 @@ MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-20b")
 
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
-# =====================================
-# 🧠 HISTORIAL
-# =====================================
+# Base de datos local para que el historial de cada usuario sea independiente
+DB_PATH = "chat_history.db"
 
-historial = []
+def inicializar_db():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS conversaciones (
+            session_id TEXT PRIMARY KEY,
+            historial TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+inicializar_db()
 
 # =====================================
-# 🤖 PERSONALIDAD DASH
+# 🤖 PERSONALIDAD DASH (OPTIMIZADA)
 # =====================================
 
 def obtener_prompt():
-    return """
-Eres Dash.
+    return """Eres Dash, la IA de ApexDash. Acompañas al conductor en su viaje como copiloto y asistente de programación de nivel experto (al nivel de ChatGPT o Gemini).
+Habla siempre en español con tono tranquilo, amable, profesional y cercano.
 
-Eres la inteligencia artificial de ApexDash.
+REGLAS DE FORMATO:
+1. Conversación casual / Autos: Habla natural, sin Markdown, listas con asteriscos ni caracteres de formato para facilitar la lectura por voz.
+2. Programación (Java, HTML, Python, etc.): Ignora la regla anterior. Entrega el código perfectamente estructurado dentro de bloques Markdown estándar (con ```) para que se pueda copiar. Si te envían errores de compilación, analiza detalladamente el fallo y devuelve el código corregido.
 
-Tu misión es acompañar al conductor durante sus viajes.
+COMANDOS ANDROID AUTOMÁTICOS:
+Si te piden llamadas, correos o reportes, responde amigablemente y agrega obligatoriamente una de estas líneas al final de tu respuesta para que el celular lo ejecute:
+- [ACCION:LLAMAR|numero_o_contacto]
+- [ACCION:CORREO|correo@destino.com|asunto|mensaje_completo]
+- [ACCION:EXPORTAR|EXCEL|nombre.xlsx|json_de_datos] (También PDF o WORD)"""
 
-Habla siempre en español.
+# =====================================
+# 🧠 GESTIÓN DE HISTORIAL EN SERVIDOR
+# =====================================
 
-Responde como una compañera de viaje tranquila, amable, profesional y cercana.
+def obtener_historial_usuario(session_id):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT historial FROM conversaciones WHERE session_id = ?", (session_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return json.loads(row[0])
+    return []
 
-Puedes conversar sobre cualquier tema, no solamente automóviles.
-
-Cuando el tema sea sobre un vehículo, comienza siempre por las causas más comunes antes de pensar en fallas graves.
-
-Cuando el usuario pida una explicación, receta, guía o procedimiento, responde con suficiente detalle para que no quede incompleto.
-
-Habla como si estuvieras conversando con una persona.
-
-No uses Markdown.
-
-No uses tablas.
-
-No uses listas con asteriscos.
-
-No uses encabezados con #.
-
-No escribas caracteres especiales para dar formato.
-
-Escribe las respuestas como lenguaje natural para que puedan leerse correctamente mediante voz.
-
-Si necesitas más información, primero haz preguntas.
-
-Nunca inventes información.
-
-Nunca rompas este personaje.
-"""
+def guardar_historial_usuario(session_id, historial):
+    # Mantener solo los últimos 4 mensajes para ahorrar tokens y mantener la memoria al grano
+    if len(historial) > 4:
+        historial = historial[-4:]
+    
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO conversaciones (session_id, historial)
+        VALUES (?, ?)
+        ON CONFLICT(session_id) DO UPDATE SET historial = excluded.historial
+    """, (session_id, json.dumps(historial)))
+    conn.commit()
+    conn.close()
 
 # =====================================
 # 🤖 IA
 # =====================================
 
-def generar_respuesta(texto):
-
-    global historial
-
+def generar_respuesta(texto, session_id):
     if not client:
         return "La IA no está disponible en este momento."
+
+    historial = obtener_historial_usuario(session_id)
 
     mensajes = [
         {
@@ -92,29 +108,28 @@ def generar_respuesta(texto):
     })
 
     # =====================================
-    # AJUSTE AUTOMÁTICO DE TOKENS
+    # AJUSTE DINÁMICO DE TOKENS
     # =====================================
-
     longitud = len(texto)
 
-    if longitud < 40:
-        max_tokens = 180
+    # Si el usuario pide explícitamente código o habla de programación, aumentamos el límite de salida
+    es_programacion = any(x in texto.lower() for x in ["codigo", "código", "programar", "java", "android", "html", "error", "error de", "compile"])
 
-    elif longitud < 120:
-        max_tokens = 300
-
-    elif longitud < 300:
-        max_tokens = 500
-
+    if es_programacion:
+        max_tokens = 1000  # Permite que entregue sistemas o scripts completos sin cortarse
     else:
-        max_tokens = 700
+        if longitud < 40:
+            max_tokens = 120
+        elif longitud < 120:
+            max_tokens = 200
+        else:
+            max_tokens = 350
 
     try:
-
         respuesta = client.chat.completions.create(
             model=MODEL,
             messages=mensajes,
-            temperature=0.6,
+            temperature=0.4,  # Menor temperatura para evitar errores y alucinaciones en código
             max_tokens=max_tokens
         )
 
@@ -123,6 +138,7 @@ def generar_respuesta(texto):
         if not texto_respuesta:
             texto_respuesta = "Disculpa, no pude generar una respuesta."
 
+        # Guardar en base de datos local
         historial.append({
             "role": "user",
             "content": texto
@@ -133,16 +149,12 @@ def generar_respuesta(texto):
             "content": texto_respuesta
         })
 
-        # Mantener solamente los últimos 3 turnos (6 mensajes)
-        if len(historial) > 6:
-            historial[:] = historial[-6:]
+        guardar_historial_usuario(session_id, historial)
 
         return texto_respuesta
 
     except Exception as e:
-
         print("ERROR IA:", e)
-
         return "Disculpa, tuve un problema al comunicarme con la inteligencia artificial."
 
 # =====================================
@@ -151,7 +163,6 @@ def generar_respuesta(texto):
 
 @app.route("/chat", methods=["POST"])
 def chat():
-
     datos = request.get_json() or {}
 
     mensaje = (
@@ -159,15 +170,17 @@ def chat():
         or datos.get("mensaje")
         or ""
     )
+    
+    # Si tu frontend no envía un session_id, se utiliza la IP del celular como identificador
+    session_id = datos.get("session_id") or request.remote_addr
 
     if not mensaje:
-
         return jsonify({
             "response": "No recibí ningún mensaje."
         }), 400
 
     return jsonify({
-        "response": generar_respuesta(mensaje)
+        "response": generar_respuesta(mensaje, session_id)
     })
 
 # =====================================
@@ -176,8 +189,14 @@ def chat():
 
 @app.route("/historial/limpiar", methods=["POST"])
 def limpiar():
+    datos = request.get_json() or {}
+    session_id = datos.get("session_id") or request.remote_addr
 
-    historial.clear()
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM conversaciones WHERE session_id = ?", (session_id,))
+    conn.commit()
+    conn.close()
 
     return jsonify({
         "response": "Historial limpiado."
@@ -189,7 +208,6 @@ def limpiar():
 
 @app.route("/")
 def home():
-
     return send_from_directory(".", "index.html")
 
 # =====================================
@@ -198,7 +216,6 @@ def home():
 
 @app.route("/<path:archivo>")
 def archivos(archivo):
-
     return send_from_directory(".", archivo)
 
 # =====================================
@@ -206,9 +223,7 @@ def archivos(archivo):
 # =====================================
 
 if __name__ == "__main__":
-
     puerto = int(os.environ.get("PORT", 10000))
-
     app.run(
         host="0.0.0.0",
         port=puerto
