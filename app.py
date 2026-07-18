@@ -1,5 +1,5 @@
 # ============================================================
-# Dash Server V2 (CORREGIDO)
+# Dash Server V2 (CORREGIDO PARCHADO)
 # app.py
 # ============================================================
 
@@ -14,10 +14,10 @@ import mimetypes
 from groq import Groq
 
 # ============================================================
-# APP
+# APP - Configurado para servir la carpeta static correctamente
 # ============================================================
 
-app = Flask(__name__, static_folder=".")
+app = Flask(__name__, static_folder="static", static_url_path="/static")
 
 # ============================================================
 # LOGS
@@ -796,7 +796,6 @@ Pregunta del usuario:
 
 @app.route("/")
 def inicio():
-    # Carga tu página de inicio con la interfaz de ApexDash en vez del JSON antiguo
     return send_from_directory(".", "index.html")
 
 
@@ -1209,7 +1208,7 @@ def borrar_memoria(session_id):
 
 
 # ============================================================
-# SERVIR ARCHIVOS ESTÁTICOS
+# SERVIR ARCHIVOS ESTÁTICOS DESDE LA CARPETA FILES
 # ============================================================
 
 @app.route(
@@ -1273,7 +1272,7 @@ def error_servidor(error):
 
         "Error interno del servidor"
 
-    }),500
+      }),500
 
 
 # ============================================================
@@ -1320,7 +1319,9 @@ def crear_carpetas():
 
         "uploads",
 
-        "logs"
+        "logs",
+        
+        "static"
 
     ]
 
