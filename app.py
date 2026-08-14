@@ -1012,13 +1012,20 @@ def transcribe():
             model=STT_MODEL,
             language="es",
             response_format="json",
-            temperature=0.0
+            temperature=0.0,
+            prompt=(
+                "Transcribe exactamente en español. "
+                "Conserva códigos OBD-II y términos automotrices. "
+                "Ejemplos de códigos: P0300, P0374, P0420, P0171, U0100. "
+                "No expliques ni corrijas lo que dice el usuario."
+            )
         )
 
         texto = (transcripcion.text or "").strip()
 
         return jsonify({
-            "texto": texto
+            "texto": texto,
+            "text": texto
         })
 
     except Exception as e:

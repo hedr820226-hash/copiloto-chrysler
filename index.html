@@ -810,12 +810,14 @@ async function transcribeVoice(audioBlob) {
 
         const data = await response.json();
 
-        if (!response.ok || !data.text) {
+        const textoReconocido = (data.text || data.texto || "").trim();
+
+        if (!response.ok || !textoReconocido) {
             throw new Error(data.error || "No se pudo transcribir el audio.");
         }
 
         const input = document.getElementById("userInput");
-        input.value = data.text.trim();
+        input.value = textoReconocido;
 
         setVoiceStatus("✍️ Dash escribió lo que dijiste. Enviando...", "active");
 
