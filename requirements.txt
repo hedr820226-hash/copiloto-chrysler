@@ -6,3 +6,4 @@ gunicorn
 faster-whisper
 av
 ctranslate2
+edge-tts
