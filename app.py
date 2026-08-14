@@ -44,7 +44,7 @@ MODEL = os.getenv(
 
 VISION_MODEL = os.getenv(
     "GROQ_VISION_MODEL",
-    "llama-3.2-11b-vision-preview"
+    "qwen/qwen3.6-27b"
 )
 
 STT_MODEL = os.getenv(
