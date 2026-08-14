@@ -58,9 +58,9 @@ client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 DB_PATH = "chat_history.db"
 
-MAX_HISTORIAL = 10
+MAX_HISTORIAL = 6
 
-MAX_ARCHIVO = 20000
+MAX_ARCHIVO = 12000
 
 # ============================================================
 # SQLITE
@@ -275,31 +275,32 @@ def construir_mensajes(
     ]
 
 
-    for item in historial:
+    # Evita enviar conversaciones enormes al modelo.
+    # 6 mensajes recientes + 1500 caracteres por mensaje mantienen
+    # el contexto útil sin superar el límite TPM de Groq.
+    for item in historial[-MAX_HISTORIAL:]:
+
+        contenido = str(item.get("content", ""))
+        if len(contenido) > 1500:
+            contenido = contenido[-1500:]
 
         mensajes.append(
-
             {
-
                 "role": item["role"],
-
-                "content": item["content"]
-
+                "content": contenido
             }
-
         )
 
 
+    mensaje_usuario = str(mensaje_usuario)
+    if len(mensaje_usuario) > 4000:
+        mensaje_usuario = mensaje_usuario[-4000:]
+
     mensajes.append(
-
         {
-
             "role": "user",
-
             "content": mensaje_usuario
-
         }
-
     )
 
 
