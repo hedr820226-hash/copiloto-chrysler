@@ -3,13 +3,15 @@
 # app.py
 # ============================================================
 
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, Response
 import os
 import sqlite3
 import json
 import base64
 import uuid
 import logging
+import asyncio
+import tempfile
 from groq import Groq
 
 # ============================================================
@@ -1039,6 +1041,72 @@ def transcribe():
         return jsonify({
             "error": "No se pudo transcribir el audio"
         }), 500
+
+
+# ============================================================
+# TEXTO -> VOZ DE DASH
+# ============================================================
+
+@app.route("/tts", methods=["POST"])
+def tts():
+    """Genera la voz femenina mexicana de Dash con Edge-TTS."""
+    try:
+        datos = request.get_json(force=True) or {}
+        texto = str(datos.get("texto", "")).strip()
+
+        if not texto:
+            return jsonify({"error": "Texto vacío"}), 400
+
+        import re
+        texto = re.sub(r"```[\s\S]*?```", " ", texto)
+        texto = re.sub(r"`([^`]+)`", r"\1", texto)
+        texto = re.sub(r"[*_#>]", "", texto)
+        texto = re.sub(r"\s+", " ", texto).strip()
+        texto = texto[:5000]
+
+        if not texto:
+            return jsonify({"error": "No hay texto hablable"}), 400
+
+        try:
+            import edge_tts
+        except ImportError:
+            return jsonify({
+                "error": "edge-tts no está instalado en el servidor"
+            }), 503
+
+        voz = os.getenv("DASH_TTS_VOICE", "es-MX-DaliaNeural")
+        velocidad = os.getenv("DASH_TTS_RATE", "-2%")
+        tono = os.getenv("DASH_TTS_PITCH", "-2Hz")
+
+        async def generar_audio():
+            with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as temp:
+                ruta = temp.name
+            try:
+                comunicador = edge_tts.Communicate(
+                    texto, voz, rate=velocidad, pitch=tono, volume="+0%"
+                )
+                await comunicador.save(ruta)
+                with open(ruta, "rb") as archivo:
+                    return archivo.read()
+            finally:
+                try:
+                    os.remove(ruta)
+                except OSError:
+                    pass
+
+        audio = asyncio.run(generar_audio())
+        return Response(
+            audio,
+            mimetype="audio/mpeg",
+            headers={
+                "Cache-Control": "no-store",
+                "Content-Disposition": "inline; filename=dash.mp3"
+            }
+        )
+
+    except Exception as e:
+        logger.error("Error TTS Dash: %s", e)
+        return jsonify({"error": str(e)}), 500
 
 
 # ============================================================

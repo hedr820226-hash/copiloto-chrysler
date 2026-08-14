@@ -830,57 +830,88 @@ async function transcribeVoice(audioBlob) {
     }
 }
 
-function speakDash(text) {
-    if (!voiceEnabled || !("speechSynthesis" in window) || !text) return;
+let dashAudio = null;
+let dashAudioUrl = null;
 
-    window.speechSynthesis.cancel();
+async function speakDash(text) {
+    if (!voiceEnabled || !text) return;
 
     const cleanText = text
         .replace(/```[\s\S]*?```/g, " ")
         .replace(/`([^`]+)`/g, "$1")
         .replace(/<[^>]*>/g, " ")
-        .replace(/[*_#]/g, "")
+        .replace(/[*_#>]/g, "")
         .replace(/\s+/g, " ")
         .trim();
 
     if (!cleanText) return;
 
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = "es-MX";
-    utterance.rate = 1.02;
-    utterance.pitch = 0.95;
-    utterance.volume = 1;
+    try {
+        if (dashAudio) {
+            dashAudio.pause();
+            dashAudio.currentTime = 0;
+            dashAudio = null;
+        }
 
-    // Intenta usar una voz española disponible en el equipo.
-    const voices = window.speechSynthesis.getVoices();
-    const spanishVoice = voices.find(v =>
-        /^es(-|_)/i.test(v.lang) &&
-        /mex|m[aá]xico|espa|google|microsoft/i.test(v.name + " " + v.lang)
-    ) || voices.find(v => /^es(-|_)/i.test(v.lang));
+        if (dashAudioUrl) {
+            URL.revokeObjectURL(dashAudioUrl);
+            dashAudioUrl = null;
+        }
 
-    if (spanishVoice) {
-        utterance.voice = spanishVoice;
+        setVoiceStatus("🔊 Dash está preparando su voz...", "active");
+
+        const response = await fetch("/tts", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({texto: cleanText})
+        });
+
+        if (!response.ok) {
+            let mensaje = "No se pudo generar la voz.";
+            try {
+                const data = await response.json();
+                mensaje = data.error || mensaje;
+            } catch (_) {}
+            throw new Error(mensaje);
+        }
+
+        const audioBlob = await response.blob();
+        dashAudioUrl = URL.createObjectURL(audioBlob);
+
+        dashAudio = new Audio(dashAudioUrl);
+        dashAudio.preload = "auto";
+        dashAudio.volume = 1.0;
+
+        dashAudio.onplay = () => {
+            setVoiceStatus("🔊 Dash está hablando...", "active");
+        };
+
+        dashAudio.onended = () => {
+            if (dashAudioUrl) URL.revokeObjectURL(dashAudioUrl);
+            dashAudioUrl = null;
+            dashAudio = null;
+            setVoiceStatus("🎙️ Pulsa el micrófono para hablar con Dash");
+        };
+
+        dashAudio.onerror = () => {
+            if (dashAudioUrl) URL.revokeObjectURL(dashAudioUrl);
+            dashAudioUrl = null;
+            dashAudio = null;
+            setVoiceStatus(
+                "La voz de Dash fue generada, pero no pudo reproducirse.",
+                "error"
+            );
+        };
+
+        await dashAudio.play();
+
+    } catch (error) {
+        console.error("VOZ DE DASH:", error);
+        setVoiceStatus(
+            "No pude reproducir la voz de Dash: " + error.message,
+            "error"
+        );
     }
-
-    utterance.onstart = () => {
-        setVoiceStatus("🔊 Dash está hablando...", "active");
-    };
-
-    utterance.onend = () => {
-        setVoiceStatus("🎙️ Pulsa el micrófono para hablar con Dash");
-    };
-
-    utterance.onerror = () => {
-        setVoiceStatus("La respuesta apareció, pero el navegador no pudo reproducir la voz.", "error");
-    };
-
-    window.speechSynthesis.speak(utterance);
-}
-
-if ("speechSynthesis" in window) {
-    window.speechSynthesis.onvoiceschanged = () => {
-        // Las voces del sistema pueden cargarse después de abrir la página.
-    };
 }
 
 
