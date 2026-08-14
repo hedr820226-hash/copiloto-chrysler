@@ -1,5 +1,5 @@
 # ============================================================
-# Dash Server V2 (CORREGIDO PARCHADO)
+# Dash Server V2 (OPTIMIZADO)
 # app.py
 # ============================================================
 
@@ -10,7 +10,6 @@ import json
 import base64
 import uuid
 import logging
-import mimetypes
 from groq import Groq
 
 # ============================================================
@@ -41,7 +40,15 @@ MODEL = os.getenv(
     "openai/gpt-oss-20b"
 )
 
-VISION_MODEL = "llama-3.2-11b-vision-preview"
+VISION_MODEL = os.getenv(
+    "GROQ_VISION_MODEL",
+    "llama-3.2-11b-vision-preview"
+)
+
+STT_MODEL = os.getenv(
+    "GROQ_STT_MODEL",
+    "whisper-large-v3-turbo"
+)
 
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
@@ -84,84 +91,18 @@ inicializar_db()
 def obtener_prompt():
 
     return """
-Eres Dash.
+Eres Dash, el asistente de ApexDash.
 
-Eres la inteligencia artificial de ApexDash.
-
-Tu función principal es ayudar al usuario a construir proyectos completos.
-
-Nunca actúas como profesor si el usuario claramente quiere que desarrolles.
-
-Cuando el usuario diga:
-
-- crea
-- desarrolla
-- programa
-- diseña
-- construye
-
-empiezas directamente.
-
-No hagas entrevistas innecesarias.
-
-Haz solamente preguntas cuando falte información realmente importante.
-
-Si puedes asumir algo razonable, lo haces.
-
-Especialidades:
-
-• Python
-• Java
-• Android
-• Kotlin
-• HTML
-• CSS
-• JavaScript
-• Node
-• Flask
-• SQLite
-• SQL
-• APIs
-• Render
-• Linux
-• Git
-• Docker
-• IA
-• ApexDash
-• Apex Market
-
-Cuando analices código:
-
-- explica el problema
-- encuentra errores
-- propone mejoras
-- entrega el código corregido
-
-Cuando recibas imágenes:
-
-analízalas completamente.
-
-Cuando recibas archivos:
-
-léelos completamente antes de responder.
-
-Nunca inventes resultados.
-
-Nunca digas que ejecutaste algo si no puedes hacerlo.
-
-Nunca inventes pruebas.
-
-Puedes analizar comandos peligrosos pero nunca afirmar que fueron ejecutados.
-
-Responde siempre en español.
-
-Para conversación casual responde corto.
-
-Para programación responde completo.
-
-Utiliza Markdown únicamente cuando estés mostrando código.
-
-Piensa como un compañero de programación.
+Responde siempre en español, de forma natural, clara y directa.
+En conversación casual sé breve.
+Cuando el usuario pida crear, programar, corregir o diseñar algo, hazlo directamente.
+Pregunta solo si falta información realmente necesaria; si puedes asumir algo razonable, continúa.
+Eres fuerte en Python, Java, Kotlin, Android, HTML, CSS, JavaScript, Flask, SQLite, APIs, Linux, Git, Docker e IA.
+Al analizar código: identifica el problema, explica lo necesario y entrega una solución corregida.
+Al recibir imágenes o archivos, analiza únicamente lo que realmente puedas comprobar.
+Nunca inventes resultados, pruebas ni ejecuciones.
+Usa Markdown cuando ayude, especialmente para código.
+Actúa como compañero de programación y copiloto de ApexDash.
 """
 
 # ============================================================
@@ -461,7 +402,7 @@ def preguntar_dash(
 
             temperature=0.3,
 
-            max_tokens=4096
+            max_tokens=int(os.getenv("GROQ_MAX_TOKENS", "4096"))
 
         )
 
@@ -517,7 +458,9 @@ def analizar_imagen(
 
         imagen_base64,
 
-        pregunta
+        pregunta,
+
+        mime_type="image/jpeg"
 
 ):
 
@@ -558,7 +501,7 @@ def analizar_imagen(
 
                     "url":
 
-                    f"data:image/jpeg;base64,{imagen_base64}"
+                    f"data:{mime_type};base64,{imagen_base64}"
 
                 }
 
@@ -689,6 +632,10 @@ def procesar_archivo(
                 "nombre":
 
                 nombre,
+
+                "mime_type":
+
+                tipo,
 
                 "contenido":
 
@@ -940,113 +887,150 @@ def chat():
     "/chat/file",
     methods=["POST"]
 )
-
 def chat_archivo():
-
 
     try:
 
-
-        datos = request.get_json()
-
+        datos = request.get_json(force=True) or {}
 
         session_id = datos.get(
-
             "session_id",
-
             str(uuid.uuid4())
-
         )
-
 
         mensaje = datos.get(
-
             "mensaje",
-
             ""
+        ).strip()
 
-        )
-
-
-        archivo = datos.get(
-
-            "archivo"
-
-        )
-
-
-        contexto = ""
-
+        archivo = datos.get("archivo")
 
         if archivo:
 
+            resultado = procesar_archivo(archivo)
 
-            resultado_archivo = procesar_archivo(
+            if "error" in resultado:
+                return jsonify(resultado), 400
 
-                archivo
+            # Las imágenes van directamente al modelo de visión.
+            if resultado.get("tipo") == "imagen":
 
-            )
+                pregunta = mensaje or "Analiza esta imagen y dime lo más importante."
 
+                vision_resultado = analizar_imagen(
+                    resultado["contenido"],
+                    pregunta,
+                    resultado.get("mime_type", "image/jpeg")
+                )
 
-            if "error" in resultado_archivo:
+                if "respuesta" in vision_resultado:
+                    actualizar_memoria(
+                        session_id,
+                        pregunta,
+                        vision_resultado["respuesta"]
+                    )
 
-
-                return jsonify(resultado_archivo),400
-
-
+                vision_resultado["session_id"] = session_id
+                return jsonify(vision_resultado)
 
             contexto = agregar_contexto_archivo(
-
                 mensaje,
-
-                resultado_archivo
-
+                resultado
             )
-
 
         else:
 
-
             contexto = mensaje
 
-
+        if not contexto:
+            return jsonify({
+                "error": "Mensaje vacío"
+            }), 400
 
         respuesta = preguntar_dash(
-
             session_id,
-
             contexto
-
         )
-
 
         respuesta["session_id"] = session_id
 
-
         return jsonify(respuesta)
-
-
 
     except Exception as e:
 
-
         logger.error(
-
             "Error archivo chat: %s",
-
             e
-
         )
 
+        return jsonify({
+            "error":
+                "No se pudo procesar el mensaje o archivo"
+        }), 500
+
+
+# ============================================================
+# VOZ -> TEXTO
+# ============================================================
+
+@app.route(
+    "/transcribe",
+    methods=["POST"]
+)
+def transcribe():
+
+    try:
+
+        if not client:
+            return jsonify({
+                "error": "GROQ_API_KEY no configurada"
+            }), 503
+
+        audio = request.files.get("audio")
+
+        if not audio:
+            return jsonify({
+                "error": "No se recibió audio"
+            }), 400
+
+        datos = audio.read()
+
+        if not datos:
+            return jsonify({
+                "error": "El audio está vacío"
+            }), 400
+
+        if len(datos) > 25 * 1024 * 1024:
+            return jsonify({
+                "error": "El audio supera el límite de 25 MB"
+            }), 413
+
+        nombre = audio.filename or "dash.webm"
+
+        transcripcion = client.audio.transcriptions.create(
+            file=(nombre, datos),
+            model=STT_MODEL,
+            language="es",
+            response_format="json",
+            temperature=0.0
+        )
+
+        texto = (transcripcion.text or "").strip()
 
         return jsonify({
+            "texto": texto
+        })
 
-            "error":
+    except Exception as e:
 
-            str(e)
+        logger.error(
+            "Error transcripción: %s",
+            e
+        )
 
-        }),500
-
+        return jsonify({
+            "error": "No se pudo transcribir el audio"
+        }), 500
 
 
 # ============================================================
@@ -1496,6 +1480,13 @@ def iniciar_servidor():
 
     )
 
+    logger.info(
+
+        "Voz: %s",
+
+        STT_MODEL
+
+    )
 
     logger.info(
 

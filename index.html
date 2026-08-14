@@ -319,6 +319,53 @@ transition: 0.2s;
 background: #2a3e7c;
 }
 
+.voice-btn {
+background: #162447;
+color: white;
+border: 1px solid rgba(110,231,255,.25);
+font-size: 22px;
+cursor: pointer;
+width: 58px;
+height: 58px;
+border-radius: 18px;
+display: flex;
+align-items: center;
+justify-content: center;
+transition: .2s;
+}
+
+.voice-btn:hover {
+background: #263d73;
+transform: translateY(-1px);
+}
+
+.voice-btn.listening {
+background: #ff3131;
+box-shadow: 0 0 25px rgba(255,49,49,.55);
+animation: dashPulse 1.1s infinite;
+}
+
+.voice-status {
+margin-top: 10px;
+color: #7f8ca8;
+font-size: 12px;
+min-height: 18px;
+text-align: center;
+}
+
+.voice-status.active {
+color: #6ee7ff;
+}
+
+.voice-status.error {
+color: #ff7070;
+}
+
+@keyframes dashPulse {
+0%,100% { transform: scale(1); }
+50% { transform: scale(1.05); }
+}
+
 .preview-container {
 display: none;
 align-items: center;
@@ -493,15 +540,20 @@ Dash: Hola. Cuéntame qué síntomas tiene el vehículo o adjunta un código o e
 
 <div class="chat-input-wrap">
 
-<!-- Botón de clip nativo para adjuntar archivos -->
+<!-- Botón para adjuntar archivos -->
 <label for="fileInput" class="attach-btn" title="Adjuntar archivo o imagen">📎</label>
 <input type="file" id="fileInput" style="display: none;" onchange="handleFileSelect(event)" accept="image/*,.java,.py,.html,.css,.js,.txt,.json">
 
-<input type="text" id="userInput" class="chat-input" placeholder="Describe el problema, sube código o arrastra un error..." onkeydown="if(event.key === 'Enter') sendMessage()">
+<!-- Botón de voz: funciona con MediaRecorder y el servidor Whisper -->
+<button id="voiceBtn" class="voice-btn" onclick="toggleVoice()" title="Hablar con Dash">🎙️</button>
+
+<input type="text" id="userInput" class="chat-input" placeholder="Escribe o habla con Dash..." onkeydown="if(event.key === 'Enter') sendMessage()">
 
 <button class="send-btn" onclick="sendMessage()">Enviar</button>
 
 </div>
+
+<div class="voice-status" id="voiceStatus" aria-live="polite">🎙️ Pulsa el micrófono para hablar con Dash</div>
 
 </div>
 
@@ -629,6 +681,208 @@ function formatMarkdown(text){
 
 
 // =====================================================
+// 🎙️ VOZ DE DASH: HABLAR -> TRANSCRIBIR -> ENVIAR -> RESPONDER
+// =====================================================
+
+let mediaRecorder = null;
+let audioChunks = [];
+let isListening = false;
+let voiceEnabled = true;
+
+function setVoiceStatus(text, type = "") {
+    const status = document.getElementById("voiceStatus");
+    if (!status) return;
+    status.textContent = text;
+    status.className = "voice-status" + (type ? " " + type : "");
+}
+
+function getSupportedMimeType() {
+    const types = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/ogg;codecs=opus",
+        "audio/ogg"
+    ];
+
+    for (const type of types) {
+        if (window.MediaRecorder && MediaRecorder.isTypeSupported(type)) {
+            return type;
+        }
+    }
+    return "";
+}
+
+async function toggleVoice() {
+    if (isListening) {
+        stopVoice();
+        return;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setVoiceStatus("Este navegador no permite acceder al micrófono.", "error");
+        return;
+    }
+
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            }
+        });
+
+        const mimeType = getSupportedMimeType();
+
+        if (!window.MediaRecorder) {
+            stream.getTracks().forEach(track => track.stop());
+            setVoiceStatus("Este navegador no soporta grabación de voz.", "error");
+            return;
+        }
+
+        mediaRecorder = mimeType
+            ? new MediaRecorder(stream, { mimeType })
+            : new MediaRecorder(stream);
+
+        audioChunks = [];
+        isListening = true;
+
+        const voiceBtn = document.getElementById("voiceBtn");
+        voiceBtn.classList.add("listening");
+        voiceBtn.textContent = "⏹️";
+        setVoiceStatus("🔴 Dash está escuchando... habla ahora.", "active");
+
+        mediaRecorder.ondataavailable = event => {
+            if (event.data && event.data.size > 0) {
+                audioChunks.push(event.data);
+            }
+        };
+
+        mediaRecorder.onstop = async () => {
+            stream.getTracks().forEach(track => track.stop());
+
+            const blobType = mediaRecorder.mimeType || mimeType || "audio/webm";
+            const audioBlob = new Blob(audioChunks, { type: blobType });
+            audioChunks = [];
+
+            if (audioBlob.size < 1000) {
+                setVoiceStatus("No se captó suficiente audio.", "error");
+                return;
+            }
+
+            await transcribeVoice(audioBlob);
+        };
+
+        mediaRecorder.start();
+    } catch (error) {
+        console.error("MICRÓFONO:", error);
+        setVoiceStatus("No pude acceder al micrófono. Revisa el permiso del navegador.", "error");
+    }
+}
+
+function stopVoice() {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+    }
+
+    isListening = false;
+
+    const voiceBtn = document.getElementById("voiceBtn");
+    if (voiceBtn) {
+        voiceBtn.classList.remove("listening");
+        voiceBtn.textContent = "🎙️";
+    }
+
+    setVoiceStatus("Procesando tu voz...", "active");
+}
+
+async function transcribeVoice(audioBlob) {
+    try {
+        const formData = new FormData();
+        const extension = audioBlob.type.includes("ogg") ? "voz.ogg" : "voz.webm";
+
+        formData.append("audio", audioBlob, extension);
+
+        const response = await fetch("/transcribe", {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.text) {
+            throw new Error(data.error || "No se pudo transcribir el audio.");
+        }
+
+        const input = document.getElementById("userInput");
+        input.value = data.text.trim();
+
+        setVoiceStatus("✍️ Dash escribió lo que dijiste. Enviando...", "active");
+
+        // Envía automáticamente el texto reconocido a la IA.
+        await sendMessage();
+
+    } catch (error) {
+        console.error("TRANSCRIPCIÓN:", error);
+        setVoiceStatus("No pude entender el audio: " + error.message, "error");
+    }
+}
+
+function speakDash(text) {
+    if (!voiceEnabled || !("speechSynthesis" in window) || !text) return;
+
+    window.speechSynthesis.cancel();
+
+    const cleanText = text
+        .replace(/```[\s\S]*?```/g, " ")
+        .replace(/`([^`]+)`/g, "$1")
+        .replace(/<[^>]*>/g, " ")
+        .replace(/[*_#]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    if (!cleanText) return;
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = "es-MX";
+    utterance.rate = 1.02;
+    utterance.pitch = 0.95;
+    utterance.volume = 1;
+
+    // Intenta usar una voz española disponible en el equipo.
+    const voices = window.speechSynthesis.getVoices();
+    const spanishVoice = voices.find(v =>
+        /^es(-|_)/i.test(v.lang) &&
+        /mex|m[aá]xico|espa|google|microsoft/i.test(v.name + " " + v.lang)
+    ) || voices.find(v => /^es(-|_)/i.test(v.lang));
+
+    if (spanishVoice) {
+        utterance.voice = spanishVoice;
+    }
+
+    utterance.onstart = () => {
+        setVoiceStatus("🔊 Dash está hablando...", "active");
+    };
+
+    utterance.onend = () => {
+        setVoiceStatus("🎙️ Pulsa el micrófono para hablar con Dash");
+    };
+
+    utterance.onerror = () => {
+        setVoiceStatus("La respuesta apareció, pero el navegador no pudo reproducir la voz.", "error");
+    };
+
+    window.speechSynthesis.speak(utterance);
+}
+
+if ("speechSynthesis" in window) {
+    window.speechSynthesis.onvoiceschanged = () => {
+        // Las voces del sistema pueden cargarse después de abrir la página.
+    };
+}
+
+
+// =====================================================
 // ENVIAR MENSAJE A DASH
 // =====================================================
 
@@ -717,6 +971,8 @@ async function sendMessage(){
 
     clearFile();
 
+    setVoiceStatus("☁️ Dash está pensando...", "active");
+
 
     chat.scrollTop=chat.scrollHeight;
 
@@ -781,6 +1037,8 @@ async function sendMessage(){
 
 
 
+        const respuestaDash = data.respuesta || data.response || data.error || "No recibí respuesta.";
+
         chat.innerHTML += `
 
 
@@ -790,13 +1048,16 @@ async function sendMessage(){
         Dash:<br>
 
 
-        ${formatMarkdown(data.respuesta || data.error)}
+        ${formatMarkdown(respuestaDash)}
 
 
         </div>
 
 
         `;
+
+        // 🔊 Dash también responde por voz.
+        speakDash(respuestaDash);
 
 
 
