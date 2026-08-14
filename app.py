@@ -12,6 +12,7 @@ import uuid
 import logging
 import asyncio
 import tempfile
+import re
 from groq import Groq
 
 # ============================================================
@@ -106,6 +107,28 @@ Nunca inventes resultados, pruebas ni ejecuciones.
 Usa Markdown cuando ayude, especialmente para código.
 Actúa como compañero de programación y copiloto de ApexDash.
 """
+
+# ============================================================
+# LIMPIAR RAZONAMIENTO INTERNO
+# ============================================================
+
+def limpiar_think(texto):
+    """Oculta bloques <think>...</think> sin alterar el resto de la respuesta."""
+    if not texto:
+        return texto
+
+    texto = re.sub(
+        r"<think\b[^>]*>[\s\S]*?</think\s*>",
+        "",
+        str(texto),
+        flags=re.IGNORECASE
+    )
+
+    # Por seguridad, elimina etiquetas sueltas si el modelo las deja.
+    texto = re.sub(r"</?think\b[^>]*>", "", texto, flags=re.IGNORECASE)
+
+    return texto.strip()
+
 
 # ============================================================
 # MEMORIA
@@ -410,7 +433,7 @@ def preguntar_dash(
         )
 
 
-        texto = respuesta.choices[0].message.content
+        texto = limpiar_think(respuesta.choices[0].message.content)
 
 
         actualizar_memoria(
@@ -557,7 +580,7 @@ def analizar_imagen(
 
             "respuesta":
 
-            respuesta.choices[0].message.content
+            limpiar_think(respuesta.choices[0].message.content)
 
         }
 
@@ -1057,7 +1080,7 @@ def tts():
         if not texto:
             return jsonify({"error": "Texto vacío"}), 400
 
-        import re
+        texto = limpiar_think(texto)
         texto = re.sub(r"```[\s\S]*?```", " ", texto)
         texto = re.sub(r"`([^`]+)`", r"\1", texto)
         texto = re.sub(r"[*_#>]", "", texto)
